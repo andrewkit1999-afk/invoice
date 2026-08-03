@@ -2,7 +2,6 @@
 <html lang="zh-HK">
 <head>
     <meta charset="UTF-8">
-    <!-- 針對手機畫面的 Viewport 設定 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>收據 / 打單系統</title>
     <!-- 引入 html2canvas 程式庫以支援轉成 PNG 圖片 -->
@@ -20,7 +19,7 @@
         }
         .container {
             display: flex;
-            flex-direction: row; /* 桌面預設左右欄 */
+            flex-direction: row;
             gap: 20px;
             max-width: 1200px;
             margin: 0 auto;
@@ -53,11 +52,11 @@
         }
         .form-group input, .form-group textarea, .form-group select {
             width: 100%;
-            padding: 12px; /* 加大觸控範圍 */
+            padding: 12px;
             border: 1px solid #ccc;
             border-radius: 8px;
             font-size: 15px;
-            -webkit-appearance: none; /* 讓手機外觀一致 */
+            -webkit-appearance: none;
         }
         .form-group textarea {
             resize: vertical;
@@ -92,31 +91,28 @@
         }
         .btn-group {
             display: flex;
+            flex-direction: column;
             gap: 10px;
             margin-top: 20px;
         }
-        .btn-print {
+        .btn-row {
+            display: flex;
+            gap: 10px;
+        }
+        .btn {
             flex: 1;
-            background-color: #1a73e8;
-            color: white;
             border: none;
             padding: 14px;
             font-size: 15px;
             font-weight: bold;
             border-radius: 8px;
             cursor: pointer;
+            transition: background 0.2s;
+            text-align: center;
         }
-        .btn-png {
-            flex: 1;
-            background-color: #34a853;
-            color: white;
-            border: none;
-            padding: 14px;
-            font-size: 15px;
-            font-weight: bold;
-            border-radius: 8px;
-            cursor: pointer;
-        }
+        .btn-print { background-color: #1a73e8; color: white; }
+        .btn-png { background-color: #34a853; color: white; }
+        .btn-whatsapp { background-color: #25D366; color: white; width: 100%; }
 
         /* 右邊單據預覽區 */
         .preview-section {
@@ -194,55 +190,28 @@
             text-align: center;
         }
 
-        /* 📱 手機版響應式介面 (Responsive Mobile Styles) */
+        /* 📱 手機版響應式設計 */
         @media screen and (max-width: 768px) {
-            body {
-                padding: 10px;
-            }
-            .container {
-                flex-direction: column; /* 改為上下排列 */
-                gap: 15px;
-            }
-            .form-section {
-                padding: 15px;
-            }
-            .invoice-card {
-                padding: 20px;
-                min-height: auto;
-            }
-            .btn-group {
-                flex-direction: column; /* 按鈕垂直排列，更易按 */
-            }
-            .btn-print, .btn-png {
-                width: 100%;
-            }
+            body { padding: 10px; }
+            .container { flex-direction: column; gap: 15px; }
+            .form-section { padding: 15px; }
+            .invoice-card { padding: 20px; min-height: auto; }
+            .btn-row { flex-direction: column; }
         }
 
-        /* 🖨️ 列印/PDF 輸出模式 */
+        /* 🖨️ 列印模式 */
         @media print {
-            body {
-                background: white;
-                padding: 0;
-            }
-            .form-section {
-                display: none;
-            }
-            .container {
-                display: block;
-            }
-            .invoice-card {
-                box-shadow: none;
-                max-width: 100%;
-                padding: 0;
-                border: none;
-            }
+            body { background: white; padding: 0; }
+            .form-section { display: none; }
+            .container { display: block; }
+            .invoice-card { box-shadow: none; max-width: 100%; padding: 0; border: none; }
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <!-- 左邊 / 手機上方：輸入資料區 -->
+    <!-- 輸入區 -->
     <div class="form-section">
         <h2>打單資料輸入</h2>
         
@@ -296,12 +265,15 @@
         </div>
 
         <div class="btn-group">
-            <button class="btn-print" onclick="window.print()">🖨️ 下載 PDF / 列印</button>
-            <button class="btn-png" onclick="downloadPNG()">🖼️ 下載 PNG 圖片</button>
+            <button class="btn btn-whatsapp" onclick="shareToWhatsApp()">💬 生成圖片並分享至 WhatsApp</button>
+            <div class="btn-row">
+                <button class="btn btn-png" onclick="downloadPNG()">🖼️ 下載 PNG 圖片</button>
+                <button class="btn btn-print" onclick="window.print()">🖨️ 下載 PDF / 列印</button>
+            </div>
         </div>
     </div>
 
-    <!-- 右邊 / 手機下方：即時預覽區 -->
+    <!-- 預覽區 -->
     <div class="preview-section">
         <div class="invoice-card" id="invoiceCard">
             <div>
@@ -333,35 +305,26 @@
 </div>
 
 <script>
-    // 自動格式化日期為 DD/MM/YYYY
     function formatDateDisplay(dateVal) {
         if (!dateVal) return "";
         const parts = dateVal.split("-");
-        if (parts.length === 3) {
-            return `${parts[2]}/${parts[1]}/${parts[0]}`;
-        }
+        if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
         return dateVal;
     }
 
-    // 一鍵設定今天日期
     function setTodayDate() {
         const today = new Date();
         const year = today.getFullYear();
         const month = String(today.getMonth() + 1).padStart(2, '0');
         const day = String(today.getDate()).padStart(2, '0');
-        
         document.getElementById('inDate').value = `${year}-${month}-${day}`;
         updatePreview();
     }
 
-    // 自動格式化數字加千分位 (逗號)
     function formatAmountInput(input) {
         let value = input.value.replace(/[^0-9.]/g, '');
         const parts = value.split('.');
-        if (parts.length > 2) {
-            value = parts[0] + '.' + parts.slice(1).join('');
-        }
-        
+        if (parts.length > 2) value = parts[0] + '.' + parts.slice(1).join('');
         if (parts[0]) {
             parts[0] = Number(parts[0]).toLocaleString('en-US');
             input.value = parts.join('.');
@@ -370,44 +333,71 @@
         }
     }
 
-    // 即時同步預覽
     function updatePreview() {
         document.getElementById('outTo').innerText = document.getElementById('inTo').value;
         document.getElementById('outFrom').innerText = document.getElementById('inFrom').value;
         document.getElementById('outTitle').innerText = document.getElementById('inTitle').value;
-        
         const rawDate = document.getElementById('inDate').value;
         document.getElementById('outDate').innerText = formatDateDisplay(rawDate);
-        
         document.getElementById('outDetails').innerText = document.getElementById('inDetails').value;
-        
         const curr = document.getElementById('inCurrency').value;
         document.getElementById('outCurrency').innerText = curr;
         document.getElementById('outCurrencySymbol').innerText = (curr === 'RMB') ? '¥' : '$';
-        
         document.getElementById('outAmount').innerText = document.getElementById('inAmount').value;
-        
         document.getElementById('outPayNote').innerText = document.getElementById('inPayNote').value;
         document.getElementById('outBankInfo').innerText = document.getElementById('inBankInfo').value;
     }
 
-    // 下載成 PNG 圖片
-    function downloadPNG() {
+    function generateCanvas() {
         const element = document.getElementById('invoiceCard');
-        
-        html2canvas(element, {
-            scale: 2,
-            backgroundColor: "#ffffff",
-            useCORS: true
-        }).then(canvas => {
+        return html2canvas(element, { scale: 2, backgroundColor: "#ffffff", useCORS: true });
+    }
+
+    function downloadPNG() {
+        generateCanvas().then(canvas => {
             const link = document.createElement('a');
             const toName = document.getElementById('inTo').value.trim() || 'Invoice';
             const dateStr = document.getElementById('outDate').innerText.replaceAll('/', '-').trim() || 'Date';
-            
             link.download = `收據_${toName}_${dateStr}.png`;
             link.href = canvas.toDataURL('image/png');
             link.click();
         });
+    }
+
+    // 🔥 Web Share API 分享圖片至 WhatsApp
+    async function shareToWhatsApp() {
+        const toName = document.getElementById('inTo').value.trim() || '客戶';
+        const dateStr = document.getElementById('outDate').innerText.trim();
+        const amount = document.getElementById('outAmount').innerText.trim();
+        const currency = document.getElementById('inCurrency').value;
+        const symbol = (currency === 'RMB') ? '¥' : '$';
+
+        const shareText = `你好！此為 ${toName} 的單據，金額為 ${currency} ${symbol}${amount} (${dateStr})。`;
+
+        try {
+            const canvas = await generateCanvas();
+            canvas.toBlob(async (blob) => {
+                const file = new File([blob], `收據_${toName}.png`, { type: 'image/png' });
+
+                // 檢查流動裝置是否支援原生圖片分享功能 (Web Share API)
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        files: [file],
+                        title: '收據',
+                        text: shareText
+                    });
+                } else {
+                    // 若電腦版瀏覽器不支援直接傳送檔案，則自動下載圖片並開啟 WhatsApp Web
+                    downloadPNG();
+                    alert("瀏覽器未支援直接傳送圖片檔案，已為你下載圖片！頁面將自動開啟 WhatsApp，請直接將圖片貼上或拉入對話框即可。");
+                    const encodedText = encodeURIComponent(shareText);
+                    window.open(`https://api.whatsapp.com/send?text=${encodedText}`, '_blank');
+                }
+            }, 'image/png');
+        } catch (err) {
+            console.error('分享失敗:', err);
+            alert('分享過程出錯，請使用「下載 PNG 圖片」功能。');
+        }
     }
 </script>
 
