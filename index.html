@@ -21,7 +21,7 @@
             display: flex;
             flex-direction: row;
             gap: 20px;
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
         }
         /* 左邊輸入區 */
@@ -31,6 +31,7 @@
             padding: 20px;
             border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            max-width: 450px;
         }
         .form-section h2 {
             margin-top: 0;
@@ -152,89 +153,94 @@
             display: flex;
             justify-content: center;
             align-items: flex-start;
+            overflow-x: auto;
         }
+
+        /* 📄 固定 A4 尺寸 (794px x 1123px) */
         .invoice-card {
             background: white;
-            width: 100%;
-            max-width: 500px;
-            padding: 30px;
+            width: 794px;
+            height: 1123px;
+            padding: 50px 60px;
             border-radius: 8px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            min-height: 550px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
             text-align: center;
+            box-sizing: border-box;
+            /* 防止螢幕過窄時變形 */
+            flex-shrink: 0; 
         }
+
         .invoice-header {
-            border-bottom: 2px solid #333;
-            padding-bottom: 15px;
-            margin-bottom: 20px;
+            border-bottom: 3px solid #333;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
             text-align: center;
         }
         .invoice-header h1 {
             margin: 0;
-            font-size: 22px;
-            letter-spacing: 2px;
+            font-size: 32px;
+            letter-spacing: 3px;
         }
         .meta-info {
             text-align: left;
         }
         .meta-info p {
-            margin: 6px 0;
-            font-size: 15px;
+            margin: 10px 0;
+            font-size: 18px;
         }
         .bill-summary {
-            margin: 25px 0;
+            margin: 40px 0;
             background: #fafafa;
-            padding: 18px;
-            border-top: 2px solid #1a73e8;
-            border-bottom: 2px solid #1a73e8;
+            padding: 25px;
+            border-top: 3px solid #1a73e8;
+            border-bottom: 3px solid #1a73e8;
         }
         .bill-summary h3 {
             margin-top: 0;
-            font-size: 15px;
+            font-size: 18px;
             color: #555;
             text-align: center;
+            letter-spacing: 1px;
         }
         .bill-details-list {
             text-align: left;
-            margin-top: 12px;
-            margin-bottom: 12px;
-            line-height: 1.6;
-            min-height: 24px;
-            font-size: 15px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            line-height: 1.8;
+            min-height: 120px;
+            font-size: 18px;
         }
         .bill-item-line {
             display: flex;
             justify-content: space-between;
-            border-bottom: 1px dashed #eee;
-            padding: 4px 0;
+            border-bottom: 1px dashed #ddd;
+            padding: 8px 0;
         }
         .total-amount {
-            font-size: 19px;
+            font-size: 26px;
             font-weight: bold;
             color: #d93025;
-            margin-top: 12px;
+            margin-top: 20px;
             text-align: right;
         }
         .payment-info {
             margin-top: auto;
-            padding-top: 15px;
+            padding-top: 25px;
             border-top: 1px dashed #ccc;
-            font-size: 13px;
+            font-size: 16px;
             color: #555;
-            line-height: 1.5;
+            line-height: 1.6;
             text-align: center;
         }
 
-        /* 📱 手機版響應式設計 */
-        @media screen and (max-width: 768px) {
-            body { padding: 10px; }
-            .container { flex-direction: column; gap: 15px; }
-            .form-section { padding: 15px; }
-            .invoice-card { padding: 20px; min-height: auto; }
-            .btn-row { flex-direction: column; }
+        /* 📱 手機與平板螢幕顯示優化：等比例自動縮放預覽，不影響實際輸出的 A4 PNG 尺寸 */
+        @media screen and (max-width: 1200px) {
+            .container { flex-direction: column; align-items: center; }
+            .form-section { max-width: 100%; width: 100%; }
+            .preview-section { width: 100%; overflow-x: auto; padding: 10px 0; }
         }
 
         /* 🖨️ 列印模式 */
@@ -242,7 +248,7 @@
             body { background: white; padding: 0; }
             .form-section { display: none; }
             .container { display: block; }
-            .invoice-card { box-shadow: none; max-width: 100%; padding: 0; border: none; }
+            .invoice-card { box-shadow: none; padding: 40px; width: 100%; height: 100vh; border: none; }
         }
     </style>
 </head>
@@ -253,7 +259,6 @@
     <div class="form-section">
         <h2>打單資料輸入</h2>
         
-        <!-- 🔝 已移至最頂 -->
         <div class="form-group">
             <label>服務類別 / 抬頭:</label>
             <input type="text" id="inTitle" value="中港客運" oninput="updatePreview()">
@@ -277,7 +282,7 @@
             </div>
         </div>
 
-        <!-- 行程 / 項目詳情 (動態新增與價格) -->
+        <!-- 行程 / 項目詳情 -->
         <div class="form-group">
             <label>行程 / 項目詳情:</label>
             <div id="itemsContainer">
@@ -320,7 +325,7 @@
         </div>
     </div>
 
-    <!-- 預覽區 -->
+    <!-- 預覽區 (標準 A4 比例卡片) -->
     <div class="preview-section">
         <div class="invoice-card" id="invoiceCard">
             <div>
@@ -462,9 +467,16 @@
         document.getElementById('outBankInfo').innerText = document.getElementById('inBankInfo').value;
     }
 
+    // 📸 固定輸出為高解析度 A4 PNG (以 2 倍 Scale 生成，清晰度更高)
     function generateCanvas() {
         const element = document.getElementById('invoiceCard');
-        return html2canvas(element, { scale: 2, backgroundColor: "#ffffff", useCORS: true });
+        return html2canvas(element, { 
+            scale: 2, 
+            backgroundColor: "#ffffff", 
+            useCORS: true,
+            width: 794,
+            height: 1123
+        });
     }
 
     function downloadPNG() {
