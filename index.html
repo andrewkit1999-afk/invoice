@@ -3,48 +3,215 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>收據 / 打單系統 (版本一)</title>
+    <title>收據 / 打單系統</title>
     <!-- 引入 html2canvas 程式庫以支援轉成 PNG 圖片 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
-        * { box-sizing: border-box; font-family: "PingFang HK", "Microsoft JhengHei", sans-serif; }
-        body { background-color: #f4f6f9; margin: 0; padding: 15px; color: #333; }
-        .container { display: flex; flex-direction: row; gap: 20px; max-width: 1200px; margin: 0 auto; }
-        .form-section { flex: 1; background: #ffffff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        .form-section h2 { margin-top: 0; color: #1a73e8; border-bottom: 2px solid #e8f0fe; padding-bottom: 10px; text-align: left; font-size: 20px; }
-        .form-group { margin-bottom: 15px; text-align: left; }
-        .form-group label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 14px; }
-        .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; -webkit-appearance: none; }
-        .form-group textarea { resize: vertical; height: 80px; }
-        .date-input-container, .amount-input-container { display: flex; gap: 8px; }
-        .date-input-container input[type="date"] { flex: 1; cursor: pointer; }
-        .amount-input-container select { width: 100px; font-weight: bold; cursor: pointer; background-color: #f8f9fa; }
-        .amount-input-container input { flex: 1; }
-        .btn-today { background-color: #f1f3f4; color: #333; border: 1px solid #ccc; padding: 0 12px; border-radius: 8px; cursor: pointer; font-weight: bold; white-space: nowrap; }
-        .btn-group { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
-        .btn-row { display: flex; gap: 10px; }
-        .btn { flex: 1; border: none; padding: 14px; font-size: 15px; font-weight: bold; border-radius: 8px; cursor: pointer; transition: background 0.2s; text-align: center; }
+        * {
+            box-sizing: border-box;
+            font-family: "PingFang HK", "Microsoft JhengHei", sans-serif;
+        }
+        body {
+            background-color: #f4f6f9;
+            margin: 0;
+            padding: 15px;
+            color: #333;
+        }
+        .container {
+            display: flex;
+            flex-direction: row;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        /* 左邊輸入區 */
+        .form-section {
+            flex: 1;
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .form-section h2 {
+            margin-top: 0;
+            color: #1a73e8;
+            border-bottom: 2px solid #e8f0fe;
+            padding-bottom: 10px;
+            text-align: left;
+            font-size: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+            text-align: left;
+        }
+        .form-group label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 15px;
+            -webkit-appearance: none;
+        }
+        .form-group textarea {
+            resize: vertical;
+            height: 80px;
+        }
+        .date-input-container, .amount-input-container {
+            display: flex;
+            gap: 8px;
+        }
+        .date-input-container input[type="date"] {
+            flex: 1;
+            cursor: pointer;
+        }
+        .amount-input-container select {
+            width: 100px;
+            font-weight: bold;
+            cursor: pointer;
+            background-color: #f8f9fa;
+        }
+        .amount-input-container input {
+            flex: 1;
+        }
+        .btn-today {
+            background-color: #f1f3f4;
+            color: #333;
+            border: 1px solid #ccc;
+            padding: 0 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .btn-row {
+            display: flex;
+            gap: 10px;
+        }
+        .btn {
+            flex: 1;
+            border: none;
+            padding: 14px;
+            font-size: 15px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+            text-align: center;
+        }
         .btn-print { background-color: #1a73e8; color: white; }
         .btn-png { background-color: #34a853; color: white; }
         .btn-whatsapp { background-color: #25D366; color: white; width: 100%; }
-        .preview-section { flex: 1; display: flex; justify-content: center; align-items: flex-start; }
-        .invoice-card { background: white; width: 100%; max-width: 500px; padding: 30px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); min-height: 550px; display: flex; flex-direction: column; justify-content: space-between; text-align: center; }
-        .invoice-header { border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 20px; text-align: center; }
-        .invoice-header h1 { margin: 0; font-size: 22px; letter-spacing: 2px; }
-        .meta-info { text-align: left; }
-        .meta-info p { margin: 6px 0; font-size: 15px; }
-        .bill-summary { margin: 25px 0; background: #fafafa; padding: 18px; border-top: 2px solid #1a73e8; border-bottom: 2px solid #1a73e8; }
-        .bill-summary h3 { margin-top: 0; font-size: 15px; color: #555; text-align: center; }
-        .bill-details { text-align: left; margin-top: 12px; margin-bottom: 12px; line-height: 1.5; min-height: 24px; font-size: 15px; }
-        .total-amount { font-size: 19px; font-weight: bold; color: #d93025; margin-top: 12px; text-align: right; }
-        .payment-info { margin-top: auto; padding-top: 15px; border-top: 1px dashed #ccc; font-size: 13px; color: #555; line-height: 1.5; text-align: center; }
-        @media screen and (max-width: 768px) { body { padding: 10px; } .container { flex-direction: column; gap: 15px; } .form-section { padding: 15px; } .invoice-card { padding: 20px; min-height: auto; } .btn-row { flex-direction: column; } }
-        @media print { body { background: white; padding: 0; } .form-section { display: none; } .container { display: block; } .invoice-card { box-shadow: none; max-width: 100%; padding: 0; border: none; } }
+
+        /* 右邊單據預覽區 */
+        .preview-section {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+        .invoice-card {
+            background: white;
+            width: 100%;
+            max-width: 500px;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            min-height: 550px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            text-align: center;
+        }
+        .invoice-header {
+            border-bottom: 2px solid #333;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .invoice-header h1 {
+            margin: 0;
+            font-size: 22px;
+            letter-spacing: 2px;
+        }
+        .meta-info {
+            text-align: left;
+        }
+        .meta-info p {
+            margin: 6px 0;
+            font-size: 15px;
+        }
+        .bill-summary {
+            margin: 25px 0;
+            background: #fafafa;
+            padding: 18px;
+            border-top: 2px solid #1a73e8;
+            border-bottom: 2px solid #1a73e8;
+        }
+        .bill-summary h3 {
+            margin-top: 0;
+            font-size: 15px;
+            color: #555;
+            text-align: center;
+        }
+        .bill-details {
+            text-align: left;
+            margin-top: 12px;
+            margin-bottom: 12px;
+            line-height: 1.5;
+            min-height: 24px;
+            font-size: 15px;
+        }
+        .total-amount {
+            font-size: 19px;
+            font-weight: bold;
+            color: #d93025;
+            margin-top: 12px;
+            text-align: right;
+        }
+        .payment-info {
+            margin-top: auto;
+            padding-top: 15px;
+            border-top: 1px dashed #ccc;
+            font-size: 13px;
+            color: #555;
+            line-height: 1.5;
+            text-align: center;
+        }
+
+        /* 📱 手機版響應式設計 */
+        @media screen and (max-width: 768px) {
+            body { padding: 10px; }
+            .container { flex-direction: column; gap: 15px; }
+            .form-section { padding: 15px; }
+            .invoice-card { padding: 20px; min-height: auto; }
+            .btn-row { flex-direction: column; }
+        }
+
+        /* 🖨️ 列印模式 */
+        @media print {
+            body { background: white; padding: 0; }
+            .form-section { display: none; }
+            .container { display: block; }
+            .invoice-card { box-shadow: none; max-width: 100%; padding: 0; border: none; }
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
+    <!-- 輸入區 -->
     <div class="form-section">
         <h2>打單資料輸入</h2>
         
@@ -106,6 +273,7 @@
         </div>
     </div>
 
+    <!-- 預覽區 -->
     <div class="preview-section">
         <div class="invoice-card" id="invoiceCard">
             <div>
@@ -196,7 +364,7 @@
         });
     }
 
-    // 版本 1 的 shareToWhatsApp
+    // 🔥 Web Share API 分享圖片至 WhatsApp
     async function shareToWhatsApp() {
         const toName = document.getElementById('inTo').value.trim() || '客戶';
         const dateStr = document.getElementById('outDate').innerText.trim();
@@ -211,6 +379,7 @@
             canvas.toBlob(async (blob) => {
                 const file = new File([blob], `收據_${toName}.png`, { type: 'image/png' });
 
+                // 檢查流動裝置是否支援原生圖片分享功能 (Web Share API)
                 if (navigator.canShare && navigator.canShare({ files: [file] })) {
                     await navigator.share({
                         files: [file],
@@ -218,6 +387,7 @@
                         text: shareText
                     });
                 } else {
+                    // 若電腦版瀏覽器不支援直接傳送檔案，則自動下載圖片並開啟 WhatsApp Web
                     downloadPNG();
                     alert("瀏覽器未支援直接傳送圖片檔案，已為你下載圖片！頁面將自動開啟 WhatsApp，請直接將圖片貼上或拉入對話框即可。");
                     const encodedText = encodeURIComponent(shareText);
