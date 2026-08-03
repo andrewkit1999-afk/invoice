@@ -50,7 +50,7 @@
             margin-bottom: 5px;
             font-size: 14px;
         }
-        .form-group input, .form-group textarea, .form-group select {
+        .form-group input, .form-group select {
             width: 100%;
             padding: 12px;
             border: 1px solid #ccc;
@@ -58,10 +58,42 @@
             font-size: 15px;
             -webkit-appearance: none;
         }
-        .form-group textarea {
-            resize: vertical;
-            height: 80px;
+
+        /* 🆕 動態項目列表樣式 */
+        .item-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+            align-items: center;
         }
+        .item-row input.item-desc {
+            flex: 2;
+        }
+        .item-row input.item-price {
+            flex: 1;
+        }
+        .btn-remove-item {
+            background-color: #ff4d4f;
+            color: white;
+            border: none;
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .btn-add-item {
+            background-color: #e8f0fe;
+            color: #1a73e8;
+            border: 1px dashed #1a73e8;
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
         .date-input-container, .amount-input-container {
             display: flex;
             gap: 8px;
@@ -165,13 +197,20 @@
             color: #555;
             text-align: center;
         }
-        .bill-details {
+        /* 🆕 預覽區項目清單樣式 */
+        .bill-details-list {
             text-align: left;
             margin-top: 12px;
             margin-bottom: 12px;
-            line-height: 1.5;
+            line-height: 1.6;
             min-height: 24px;
             font-size: 15px;
+        }
+        .bill-item-line {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px dashed #eee;
+            padding: 4px 0;
         }
         .total-amount {
             font-size: 19px;
@@ -238,9 +277,17 @@
             </div>
         </div>
 
+        <!-- 🆕 行程 / 項目詳情 (動態新增與價格) -->
         <div class="form-group">
             <label>行程 / 項目詳情:</label>
-            <textarea id="inDetails" placeholder="例如: 24/7 深圳北站~西貢南邊圍" oninput="updatePreview()"></textarea>
+            <div id="itemsContainer">
+                <div class="item-row">
+                    <input type="text" class="item-desc" placeholder="例如: 24/7 深圳北站~西貢" oninput="updatePreview()">
+                    <input type="text" class="item-price" placeholder="價錢 ($)" oninput="formatItemPrice(this); updatePreview()">
+                    <button type="button" class="btn-remove-item" onclick="removeItemRow(this)">🗑️</button>
+                </div>
+            </div>
+            <button type="button" class="btn-add-item" onclick="addItemRow()">➕ 新增項目</button>
         </div>
 
         <div class="form-group">
@@ -250,7 +297,7 @@
                     <option value="HKD">HKD ($)</option>
                     <option value="RMB">RMB (¥)</option>
                 </select>
-                <input type="text" id="inAmount" value="" placeholder="例如: 10000" oninput="formatAmountInput(this); updatePreview()">
+                <input type="text" id="inAmount" value="" placeholder="可自動計算或手動修改" oninput="formatAmountInput(this); updatePreview()">
             </div>
         </div>
 
@@ -289,9 +336,9 @@
 
                 <div class="bill-summary">
                     <h3>BILL SUMMARY 項目總覽</h3>
-                    <p id="outDetails" class="bill-details" style="white-space: pre-line;"></p>
+                    <div id="outDetailsList" class="bill-details-list"></div>
                     <div class="total-amount">
-                        Total: <span id="outCurrency">HKD</span> <span id="outCurrencySymbol">$</span><span id="outAmount"></span>
+                        Total: <span id="outCurrency">HKD</span> <span id="outCurrencySymbol">$</span><span id="outAmount">0</span>
                     </div>
                 </div>
             </div>
@@ -321,6 +368,15 @@
         updatePreview();
     }
 
+    // 格式化單個項目的金額輸入
+    function formatItemPrice(input) {
+        let value = input.value.replace(/[^0-9.]/g, '');
+        const parts = value.split('.');
+        if (parts.length > 2) value = parts[0] + '.' + parts.slice(1).join('');
+        input.value = value;
+    }
+
+    // 格式化總金額輸入框
     function formatAmountInput(input) {
         let value = input.value.replace(/[^0-9.]/g, '');
         const parts = value.split('.');
@@ -333,17 +389,82 @@
         }
     }
 
+    // ➕ 新增項目行
+    function addItemRow() {
+        const container = document.getElementById('itemsContainer');
+        const newRow = document.createElement('div');
+        newRow.className = 'item-row';
+        newRow.innerHTML = `
+            <input type="text" class="item-desc" placeholder="項目名稱 / 行程" oninput="updatePreview()">
+            <input type="text" class="item-price" placeholder="價錢 ($)" oninput="formatItemPrice(this); updatePreview()">
+            <button type="button" class="btn-remove-item" onclick="removeItemRow(this)">🗑️</button>
+        `;
+        container.appendChild(newRow);
+        updatePreview();
+    }
+
+    // 🗑️ 刪除項目行
+    function removeItemRow(btn) {
+        const container = document.getElementById('itemsContainer');
+        if (container.children.length > 1) {
+            btn.parentElement.remove();
+            updatePreview();
+        } else {
+            alert("最少要保留一個項目！");
+        }
+    }
+
+    // 🔄 更新預覽區與計算 Total
     function updatePreview() {
         document.getElementById('outTo').innerText = document.getElementById('inTo').value;
         document.getElementById('outFrom').innerText = document.getElementById('inFrom').value;
         document.getElementById('outTitle').innerText = document.getElementById('inTitle').value;
         const rawDate = document.getElementById('inDate').value;
         document.getElementById('outDate').innerText = formatDateDisplay(rawDate);
-        document.getElementById('outDetails').innerText = document.getElementById('inDetails').value;
+        
         const curr = document.getElementById('inCurrency').value;
         document.getElementById('outCurrency').innerText = curr;
-        document.getElementById('outCurrencySymbol').innerText = (curr === 'RMB') ? '¥' : '$';
-        document.getElementById('outAmount').innerText = document.getElementById('inAmount').value;
+        const symbol = (curr === 'RMB') ? '¥' : '$';
+        document.getElementById('outCurrencySymbol').innerText = symbol;
+
+        // 讀取所有項目列，生成預覽並計算 Total
+        const itemRows = document.querySelectorAll('.item-row');
+        const outList = document.getElementById('outDetailsList');
+        outList.innerHTML = '';
+
+        let calculatedTotal = 0;
+        let hasItemPrices = false;
+
+        itemRows.forEach(row => {
+            const desc = row.querySelector('.item-desc').value.trim();
+            const priceVal = row.querySelector('.item-price').value.trim();
+            const priceNum = parseFloat(priceVal) || 0;
+
+            if (priceVal !== '') {
+                hasItemPrices = true;
+                calculatedTotal += priceNum;
+            }
+
+            if (desc || priceVal) {
+                const line = document.createElement('div');
+                line.className = 'bill-item-line';
+                line.innerHTML = `
+                    <span>${desc || '---'}</span>
+                    <span>${priceVal ? (symbol + Number(priceNum).toLocaleString('en-US')) : ''}</span>
+                `;
+                outList.appendChild(line);
+            }
+        });
+
+        // 如果項目中有輸入金額，自動更新總金額輸入框及預覽
+        const inAmountInput = document.getElementById('inAmount');
+        if (hasItemPrices && document.activeElement !== inAmountInput) {
+            inAmountInput.value = calculatedTotal.toLocaleString('en-US');
+            document.getElementById('outAmount').innerText = calculatedTotal.toLocaleString('en-US');
+        } else {
+            document.getElementById('outAmount').innerText = inAmountInput.value || '0';
+        }
+
         document.getElementById('outPayNote').innerText = document.getElementById('inPayNote').value;
         document.getElementById('outBankInfo').innerText = document.getElementById('inBankInfo').value;
     }
@@ -364,7 +485,6 @@
         });
     }
 
-    // 🔥 Web Share API 分享圖片至 WhatsApp
     async function shareToWhatsApp() {
         const toName = document.getElementById('inTo').value.trim() || '客戶';
         const dateStr = document.getElementById('outDate').innerText.trim();
@@ -379,7 +499,6 @@
             canvas.toBlob(async (blob) => {
                 const file = new File([blob], `收據_${toName}.png`, { type: 'image/png' });
 
-                // 檢查流動裝置是否支援原生圖片分享功能 (Web Share API)
                 if (navigator.canShare && navigator.canShare({ files: [file] })) {
                     await navigator.share({
                         files: [file],
@@ -387,9 +506,8 @@
                         text: shareText
                     });
                 } else {
-                    // 若電腦版瀏覽器不支援直接傳送檔案，則自動下載圖片並開啟 WhatsApp Web
                     downloadPNG();
-                    alert("瀏覽器未支援直接傳送圖片檔案，已為你下載圖片！頁面將自動開啟 WhatsApp，請直接將圖片貼上或拉入對話框即可。");
+                    alert("已為你下載圖片！頁面將自動開啟 WhatsApp，請直接將圖片貼上或拉入對話框即可。");
                     const encodedText = encodeURIComponent(shareText);
                     window.open(`https://api.whatsapp.com/send?text=${encodedText}`, '_blank');
                 }
