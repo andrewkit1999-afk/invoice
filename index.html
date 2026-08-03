@@ -2,8 +2,11 @@
 <html lang="zh-HK">
 <head>
     <meta charset="UTF-8">
+    <!-- 針對手機畫面的 Viewport 設定 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>收據 / 打單系統</title>
+    <!-- 引入 html2canvas 程式庫以支援轉成 PNG 圖片 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -12,11 +15,12 @@
         body {
             background-color: #f4f6f9;
             margin: 0;
-            padding: 20px;
+            padding: 15px;
             color: #333;
         }
         .container {
             display: flex;
+            flex-direction: row; /* 桌面預設左右欄 */
             gap: 20px;
             max-width: 1200px;
             margin: 0 auto;
@@ -25,7 +29,7 @@
         .form-section {
             flex: 1;
             background: #ffffff;
-            padding: 25px;
+            padding: 20px;
             border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         }
@@ -35,6 +39,7 @@
             border-bottom: 2px solid #e8f0fe;
             padding-bottom: 10px;
             text-align: left;
+            font-size: 20px;
         }
         .form-group {
             margin-bottom: 15px;
@@ -46,52 +51,92 @@
             margin-bottom: 5px;
             font-size: 14px;
         }
-        .form-group input, .form-group textarea {
+        .form-group input, .form-group textarea, .form-group select {
             width: 100%;
-            padding: 10px;
+            padding: 12px; /* 加大觸控範圍 */
             border: 1px solid #ccc;
-            border-radius: 6px;
-            font-size: 14px;
+            border-radius: 8px;
+            font-size: 15px;
+            -webkit-appearance: none; /* 讓手機外觀一致 */
         }
         .form-group textarea {
             resize: vertical;
             height: 80px;
         }
+        .date-input-container, .amount-input-container {
+            display: flex;
+            gap: 8px;
+        }
+        .date-input-container input[type="date"] {
+            flex: 1;
+            cursor: pointer;
+        }
+        .amount-input-container select {
+            width: 100px;
+            font-weight: bold;
+            cursor: pointer;
+            background-color: #f8f9fa;
+        }
+        .amount-input-container input {
+            flex: 1;
+        }
+        .btn-today {
+            background-color: #f1f3f4;
+            color: #333;
+            border: 1px solid #ccc;
+            padding: 0 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
         .btn-print {
-            width: 100%;
+            flex: 1;
             background-color: #1a73e8;
             color: white;
             border: none;
-            padding: 12px;
-            font-size: 16px;
+            padding: 14px;
+            font-size: 15px;
             font-weight: bold;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
-            transition: background 0.2s;
-            margin-top: 10px;
         }
-        .btn-print:hover {
-            background-color: #1557b0;
+        .btn-png {
+            flex: 1;
+            background-color: #34a853;
+            color: white;
+            border: none;
+            padding: 14px;
+            font-size: 15px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
         }
 
-        /* 右邊單據預覽區 - 全部置中 */
+        /* 右邊單據預覽區 */
         .preview-section {
             flex: 1;
             display: flex;
             justify-content: center;
+            align-items: flex-start;
         }
         .invoice-card {
             background: white;
             width: 100%;
             max-width: 500px;
-            padding: 40px;
+            padding: 30px;
             border-radius: 8px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            min-height: 600px;
+            min-height: 550px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            text-align: center; /* 單據卡片內所有文字置中 */
+            text-align: center;
         }
         .invoice-header {
             border-bottom: 2px solid #333;
@@ -101,48 +146,79 @@
         }
         .invoice-header h1 {
             margin: 0;
-            font-size: 24px;
+            font-size: 22px;
             letter-spacing: 2px;
         }
         .meta-info {
-            text-align: center;
+            text-align: left;
         }
         .meta-info p {
             margin: 6px 0;
             font-size: 15px;
         }
         .bill-summary {
-            margin: 30px 0;
+            margin: 25px 0;
             background: #fafafa;
-            padding: 20px;
+            padding: 18px;
             border-top: 2px solid #1a73e8;
             border-bottom: 2px solid #1a73e8;
-            text-align: center;
         }
         .bill-summary h3 {
             margin-top: 0;
-            font-size: 16px;
+            font-size: 15px;
             color: #555;
             text-align: center;
         }
+        .bill-details {
+            text-align: left;
+            margin-top: 12px;
+            margin-bottom: 12px;
+            line-height: 1.5;
+            min-height: 24px;
+            font-size: 15px;
+        }
         .total-amount {
-            font-size: 20px;
+            font-size: 19px;
             font-weight: bold;
             color: #d93025;
-            margin-top: 15px;
-            text-align: center;
+            margin-top: 12px;
+            text-align: right;
         }
         .payment-info {
             margin-top: auto;
-            padding-top: 20px;
+            padding-top: 15px;
             border-top: 1px dashed #ccc;
-            font-size: 14px;
+            font-size: 13px;
             color: #555;
-            line-height: 1.6;
+            line-height: 1.5;
             text-align: center;
         }
 
-        /* 列印模式 */
+        /* 📱 手機版響應式介面 (Responsive Mobile Styles) */
+        @media screen and (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            .container {
+                flex-direction: column; /* 改為上下排列 */
+                gap: 15px;
+            }
+            .form-section {
+                padding: 15px;
+            }
+            .invoice-card {
+                padding: 20px;
+                min-height: auto;
+            }
+            .btn-group {
+                flex-direction: column; /* 按鈕垂直排列，更易按 */
+            }
+            .btn-print, .btn-png {
+                width: 100%;
+            }
+        }
+
+        /* 🖨️ 列印/PDF 輸出模式 */
         @media print {
             body {
                 background: white;
@@ -166,13 +242,13 @@
 <body>
 
 <div class="container">
-    <!-- 左邊填表區 -->
+    <!-- 左邊 / 手機上方：輸入資料區 -->
     <div class="form-section">
         <h2>打單資料輸入</h2>
         
         <div class="form-group">
             <label>客戶名稱 (To):</label>
-            <input type="text" id="inTo" value="Mall natural limited" oninput="updatePreview()">
+            <input type="text" id="inTo" value="" placeholder="例如: Mall natural limited" oninput="updatePreview()">
         </div>
 
         <div class="form-group">
@@ -187,17 +263,26 @@
 
         <div class="form-group">
             <label>單據日期:</label>
-            <input type="text" id="inDate" value="27/07/2026" oninput="updatePreview()">
+            <div class="date-input-container">
+                <input type="date" id="inDate" onchange="updatePreview()">
+                <button type="button" class="btn-today" onclick="setTodayDate()">📅 今天</button>
+            </div>
         </div>
 
         <div class="form-group">
             <label>行程 / 項目詳情:</label>
-            <textarea id="inDetails" oninput="updatePreview()">24/7 深圳北站~西貢南邊圍</textarea>
+            <textarea id="inDetails" placeholder="例如: 24/7 深圳北站~西貢南邊圍" oninput="updatePreview()"></textarea>
         </div>
 
         <div class="form-group">
-            <label>總金額 (HKD):</label>
-            <input type="text" id="inAmount" value="1,000" oninput="updatePreview()">
+            <label>總金額與幣值:</label>
+            <div class="amount-input-container">
+                <select id="inCurrency" onchange="updatePreview()">
+                    <option value="HKD">HKD ($)</option>
+                    <option value="RMB">RMB (¥)</option>
+                </select>
+                <input type="text" id="inAmount" value="" placeholder="例如: 10000" oninput="formatAmountInput(this); updatePreview()">
+            </div>
         </div>
 
         <div class="form-group">
@@ -210,28 +295,31 @@
             <input type="text" id="inBankInfo" value="015-146-10-14627-4 Fung Kang Fai Danny" oninput="updatePreview()">
         </div>
 
-        <button class="btn-print" onclick="window.print()">🖨️ 下載 PDF / 列印</button>
+        <div class="btn-group">
+            <button class="btn-print" onclick="window.print()">🖨️ 下載 PDF / 列印</button>
+            <button class="btn-png" onclick="downloadPNG()">🖼️ 下載 PNG 圖片</button>
+        </div>
     </div>
 
-    <!-- 右邊預覽區 -->
+    <!-- 右邊 / 手機下方：即時預覽區 -->
     <div class="preview-section">
-        <div class="invoice-card">
+        <div class="invoice-card" id="invoiceCard">
             <div>
                 <div class="invoice-header">
                     <h1 id="outTitle">中港客運</h1>
                 </div>
 
                 <div class="meta-info">
-                    <p><strong>To:</strong> <span id="outTo">Mall natural limited</span></p>
+                    <p><strong>To:</strong> <span id="outTo"></span></p>
                     <p><strong>From:</strong> <span id="outFrom">Danny Fung</span></p>
-                    <p><strong>Date:</strong> <span id="outDate">27/07/2026</span></p>
+                    <p><strong>Date:</strong> <span id="outDate"></span></p>
                 </div>
 
                 <div class="bill-summary">
                     <h3>BILL SUMMARY 項目總覽</h3>
-                    <p id="outDetails" style="white-space: pre-line;">24/7 深圳北站~西貢南邊圍</p>
+                    <p id="outDetails" class="bill-details" style="white-space: pre-line;"></p>
                     <div class="total-amount">
-                        Total: HKD $<span id="outAmount">1,000</span>
+                        Total: <span id="outCurrency">HKD</span> <span id="outCurrencySymbol">$</span><span id="outAmount"></span>
                     </div>
                 </div>
             </div>
@@ -245,16 +333,81 @@
 </div>
 
 <script>
-    // 即時更新預覽內容
+    // 自動格式化日期為 DD/MM/YYYY
+    function formatDateDisplay(dateVal) {
+        if (!dateVal) return "";
+        const parts = dateVal.split("-");
+        if (parts.length === 3) {
+            return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+        return dateVal;
+    }
+
+    // 一鍵設定今天日期
+    function setTodayDate() {
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        
+        document.getElementById('inDate').value = `${year}-${month}-${day}`;
+        updatePreview();
+    }
+
+    // 自動格式化數字加千分位 (逗號)
+    function formatAmountInput(input) {
+        let value = input.value.replace(/[^0-9.]/g, '');
+        const parts = value.split('.');
+        if (parts.length > 2) {
+            value = parts[0] + '.' + parts.slice(1).join('');
+        }
+        
+        if (parts[0]) {
+            parts[0] = Number(parts[0]).toLocaleString('en-US');
+            input.value = parts.join('.');
+        } else {
+            input.value = value;
+        }
+    }
+
+    // 即時同步預覽
     function updatePreview() {
         document.getElementById('outTo').innerText = document.getElementById('inTo').value;
         document.getElementById('outFrom').innerText = document.getElementById('inFrom').value;
         document.getElementById('outTitle').innerText = document.getElementById('inTitle').value;
-        document.getElementById('outDate').innerText = document.getElementById('inDate').value;
+        
+        const rawDate = document.getElementById('inDate').value;
+        document.getElementById('outDate').innerText = formatDateDisplay(rawDate);
+        
         document.getElementById('outDetails').innerText = document.getElementById('inDetails').value;
+        
+        const curr = document.getElementById('inCurrency').value;
+        document.getElementById('outCurrency').innerText = curr;
+        document.getElementById('outCurrencySymbol').innerText = (curr === 'RMB') ? '¥' : '$';
+        
         document.getElementById('outAmount').innerText = document.getElementById('inAmount').value;
+        
         document.getElementById('outPayNote').innerText = document.getElementById('inPayNote').value;
         document.getElementById('outBankInfo').innerText = document.getElementById('inBankInfo').value;
+    }
+
+    // 下載成 PNG 圖片
+    function downloadPNG() {
+        const element = document.getElementById('invoiceCard');
+        
+        html2canvas(element, {
+            scale: 2,
+            backgroundColor: "#ffffff",
+            useCORS: true
+        }).then(canvas => {
+            const link = document.createElement('a');
+            const toName = document.getElementById('inTo').value.trim() || 'Invoice';
+            const dateStr = document.getElementById('outDate').innerText.replaceAll('/', '-').trim() || 'Date';
+            
+            link.download = `收據_${toName}_${dateStr}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        });
     }
 </script>
 
