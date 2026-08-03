@@ -51,6 +51,10 @@
             margin-bottom: 5px;
             font-size: 14px;
         }
+        .form-group label .required {
+            color: #d93025;
+            margin-left: 2px;
+        }
         .form-group input, .form-group select {
             width: 100%;
             padding: 12px;
@@ -170,7 +174,7 @@
             text-align: center;
             box-sizing: border-box;
             flex-shrink: 0;
-            transform-origin: top center; /* 讓縮放以頂部中心為基準 */
+            transform-origin: top center;
         }
 
         .invoice-header {
@@ -236,26 +240,26 @@
             text-align: center;
         }
 
-        /* 📱 手機與平板預覽自動縮放（防走樣） */
+        /* 📱 手機與平板預覽自動縮放 */
         @media screen and (max-width: 1200px) {
             .container { flex-direction: column; align-items: center; }
             .form-section { max-width: 100%; width: 100%; }
             .preview-section { 
                 width: 100%; 
-                height: 700px; /* 控制預覽區高度 */
+                height: 700px; 
                 overflow: hidden; 
             }
             .invoice-card {
-                transform: scale(0.55); /* 平板/中螢幕縮小至 55% */
+                transform: scale(0.55);
             }
         }
 
         @media screen and (max-width: 500px) {
             .preview-section { 
-                height: 520px; /* 手機版高度適應 */
+                height: 520px; 
             }
             .invoice-card {
-                transform: scale(0.42); /* 手機小螢幕縮小至 42% 剛好填滿 */
+                transform: scale(0.42);
             }
         }
 
@@ -282,25 +286,29 @@
     <div class="form-section">
         <h2>打單資料輸入</h2>
         
+        <!-- ❗ 必填：服務類別 / 抬頭 -->
         <div class="form-group">
-            <label>服務類別 / 抬頭:</label>
-            <input type="text" id="inTitle" value="中港客運" oninput="updatePreview()">
+            <label>服務類別 / 抬頭 <span class="required">* (必填)</span>:</label>
+            <input type="text" id="inTitle" value="中港客運" required oninput="updatePreview()">
         </div>
 
+        <!-- ❗ 必填：客戶名稱 (To) -->
         <div class="form-group">
-            <label>客戶名稱 (To):</label>
-            <input type="text" id="inTo" value="" placeholder="例如: Mall natural limited" oninput="updatePreview()">
+            <label>客戶名稱 (To) <span class="required">* (必填)</span>:</label>
+            <input type="text" id="inTo" value="" required placeholder="例如: Mall natural limited" oninput="updatePreview()">
         </div>
 
+        <!-- ❗ 必填：發單人 (From) -->
         <div class="form-group">
-            <label>發單人 (From):</label>
-            <input type="text" id="inFrom" value="Danny Fung" oninput="updatePreview()">
+            <label>發單人 (From) <span class="required">* (必填)</span>:</label>
+            <input type="text" id="inFrom" value="Danny Fung" required oninput="updatePreview()">
         </div>
 
+        <!-- ❗ 必填：單據日期 -->
         <div class="form-group">
-            <label>單據日期:</label>
+            <label>單據日期 <span class="required">* (必填)</span>:</label>
             <div class="date-input-container">
-                <input type="date" id="inDate" onchange="updatePreview()">
+                <input type="date" id="inDate" required onchange="updatePreview()">
                 <button type="button" class="btn-today" onclick="setTodayDate()">📅 今天</button>
             </div>
         </div>
@@ -343,12 +351,12 @@
             <button class="btn btn-whatsapp" onclick="shareToWhatsApp()">💬 生成圖片並分享至 WhatsApp</button>
             <div class="btn-row">
                 <button class="btn btn-png" onclick="downloadPNG()">🖼️ 下載 PNG 圖片</button>
-                <button class="btn btn-print" onclick="window.print()">🖨️ 下載 PDF / 列印</button>
+                <button class="btn btn-print" onclick="handlePrint()">🖨️ 下載 PDF / 列印</button>
             </div>
         </div>
     </div>
 
-    <!-- 預覽區 (手機版已加入自動縮放) -->
+    <!-- 預覽區 -->
     <div class="preview-section">
         <div class="invoice-card" id="invoiceCard">
             <div>
@@ -394,6 +402,40 @@
         const day = String(today.getDate()).padStart(2, '0');
         document.getElementById('inDate').value = `${year}-${month}-${day}`;
         updatePreview();
+    }
+
+    // 🔍 表單必填欄位驗證（抬頭、客戶名稱、發單人、日期）
+    function validateForm() {
+        const titleVal = document.getElementById('inTitle').value.trim();
+        const toVal = document.getElementById('inTo').value.trim();
+        const fromVal = document.getElementById('inFrom').value.trim();
+        const dateVal = document.getElementById('inDate').value;
+
+        if (!titleVal) {
+            alert('⚠️ 請輸入「服務類別 / 抬頭」！');
+            document.getElementById('inTitle').focus();
+            return false;
+        }
+
+        if (!toVal) {
+            alert('⚠️ 請輸入「客戶名稱 (To)」！');
+            document.getElementById('inTo').focus();
+            return false;
+        }
+
+        if (!fromVal) {
+            alert('⚠️ 請輸入「發單人 (From)」！');
+            document.getElementById('inFrom').focus();
+            return false;
+        }
+
+        if (!dateVal) {
+            alert('⚠️ 請選擇 / 輸入「單據日期」！');
+            document.getElementById('inDate').focus();
+            return false;
+        }
+
+        return true;
     }
 
     function formatItemPrice(input) {
@@ -490,12 +532,10 @@
         document.getElementById('outBankInfo').innerText = document.getElementById('inBankInfo').value;
     }
 
-    // 📸 截圖前暫時還原 scale(1) 確保 PNG 清晰度，截圖後恢復縮放
     function generateCanvas() {
         const element = document.getElementById('invoiceCard');
         const originalTransform = element.style.transform;
         
-        // 暫時還原為原尺寸 1:1 以確保截圖清晰度
         element.style.transform = 'none';
 
         return html2canvas(element, { 
@@ -505,12 +545,14 @@
             width: 794,
             height: 1123
         }).then(canvas => {
-            element.style.transform = originalTransform; // 截圖完成後恢復畫面的縮放
+            element.style.transform = originalTransform;
             return canvas;
         });
     }
 
     function downloadPNG() {
+        if (!validateForm()) return;
+
         generateCanvas().then(canvas => {
             const link = document.createElement('a');
             const toName = document.getElementById('inTo').value.trim() || 'Invoice';
@@ -521,7 +563,14 @@
         });
     }
 
+    function handlePrint() {
+        if (!validateForm()) return;
+        window.print();
+    }
+
     async function shareToWhatsApp() {
+        if (!validateForm()) return;
+
         const toName = document.getElementById('inTo').value.trim() || '客戶';
         const dateStr = document.getElementById('outDate').innerText.trim();
         const amount = document.getElementById('outAmount').innerText.trim();
