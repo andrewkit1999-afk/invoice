@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>收據 / 打單系統</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: "PingFang HK", "Microsoft JhengHei", sans-serif;
+        }
+        body {
+            background-color: #f4f6f9;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            display: flex;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        /* 左邊輸入區 */
+        .form-section {
+            flex: 1;
+            background: #ffffff;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .form-section h2 {
+            margin-top: 0;
+            color: #1a73e8;
+            border-bottom: 2px solid #e8f0fe;
+            padding-bottom: 10px;
+            text-align: left;
+        }
+        .form-group {
+            margin-bottom: 15px;
+            text-align: left;
+        }
+        .form-group label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .form-group textarea {
+            resize: vertical;
+            height: 80px;
+        }
+        .btn-print {
+            width: 100%;
+            background-color: #1a73e8;
+            color: white;
+            border: none;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 10px;
+        }
+        .btn-print:hover {
+            background-color: #1557b0;
+        }
+
+        /* 右邊單據預覽區 - 全部置中 */
+        .preview-section {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+        }
+        .invoice-card {
+            background: white;
+            width: 100%;
+            max-width: 500px;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            min-height: 600px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            text-align: center; /* 單據卡片內所有文字置中 */
+        }
+        .invoice-header {
+            border-bottom: 2px solid #333;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .invoice-header h1 {
+            margin: 0;
+            font-size: 24px;
+            letter-spacing: 2px;
+        }
+        .meta-info {
+            text-align: center;
+        }
+        .meta-info p {
+            margin: 6px 0;
+            font-size: 15px;
+        }
+        .bill-summary {
+            margin: 30px 0;
+            background: #fafafa;
+            padding: 20px;
+            border-top: 2px solid #1a73e8;
+            border-bottom: 2px solid #1a73e8;
+            text-align: center;
+        }
+        .bill-summary h3 {
+            margin-top: 0;
+            font-size: 16px;
+            color: #555;
+            text-align: center;
+        }
+        .total-amount {
+            font-size: 20px;
+            font-weight: bold;
+            color: #d93025;
+            margin-top: 15px;
+            text-align: center;
+        }
+        .payment-info {
+            margin-top: auto;
+            padding-top: 20px;
+            border-top: 1px dashed #ccc;
+            font-size: 14px;
+            color: #555;
+            line-height: 1.6;
+            text-align: center;
+        }
+
+        /* 列印模式 */
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            .form-section {
+                display: none;
+            }
+            .container {
+                display: block;
+            }
+            .invoice-card {
+                box-shadow: none;
+                max-width: 100%;
+                padding: 0;
+                border: none;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- 左邊填表區 -->
+    <div class="form-section">
+        <h2>打單資料輸入</h2>
+        
+        <div class="form-group">
+            <label>客戶名稱 (To):</label>
+            <input type="text" id="inTo" value="Mall natural limited" oninput="updatePreview()">
+        </div>
+
+        <div class="form-group">
+            <label>發單人 (From):</label>
+            <input type="text" id="inFrom" value="Danny Fung" oninput="updatePreview()">
+        </div>
+
+        <div class="form-group">
+            <label>服務類別 / 抬頭:</label>
+            <input type="text" id="inTitle" value="中港客運" oninput="updatePreview()">
+        </div>
+
+        <div class="form-group">
+            <label>單據日期:</label>
+            <input type="text" id="inDate" value="27/07/2026" oninput="updatePreview()">
+        </div>
+
+        <div class="form-group">
+            <label>行程 / 項目詳情:</label>
+            <textarea id="inDetails" oninput="updatePreview()">24/7 深圳北站~西貢南邊圍</textarea>
+        </div>
+
+        <div class="form-group">
+            <label>總金額 (HKD):</label>
+            <input type="text" id="inAmount" value="1,000" oninput="updatePreview()">
+        </div>
+
+        <div class="form-group">
+            <label>付款指引 / 備註:</label>
+            <input type="text" id="inPayNote" value="請存入東亞銀行或以轉數快支付,謝謝!" oninput="updatePreview()">
+        </div>
+
+        <div class="form-group">
+            <label>銀行戶口 / 轉數快資料:</label>
+            <input type="text" id="inBankInfo" value="015-146-10-14627-4 Fung Kang Fai Danny" oninput="updatePreview()">
+        </div>
+
+        <button class="btn-print" onclick="window.print()">🖨️ 下載 PDF / 列印</button>
+    </div>
+
+    <!-- 右邊預覽區 -->
+    <div class="preview-section">
+        <div class="invoice-card">
+            <div>
+                <div class="invoice-header">
+                    <h1 id="outTitle">中港客運</h1>
+                </div>
+
+                <div class="meta-info">
+                    <p><strong>To:</strong> <span id="outTo">Mall natural limited</span></p>
+                    <p><strong>From:</strong> <span id="outFrom">Danny Fung</span></p>
+                    <p><strong>Date:</strong> <span id="outDate">27/07/2026</span></p>
+                </div>
+
+                <div class="bill-summary">
+                    <h3>BILL SUMMARY 項目總覽</h3>
+                    <p id="outDetails" style="white-space: pre-line;">24/7 深圳北站~西貢南邊圍</p>
+                    <div class="total-amount">
+                        Total: HKD $<span id="outAmount">1,000</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="payment-info">
+                <p id="outPayNote">請存入東亞銀行或以轉數快支付,謝謝!</p>
+                <p><strong><span id="outBankInfo">015-146-10-14627-4 Fung Kang Fai Danny</span></strong></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 即時更新預覽內容
+    function updatePreview() {
+        document.getElementById('outTo').innerText = document.getElementById('inTo').value;
+        document.getElementById('outFrom').innerText = document.getElementById('inFrom').value;
+        document.getElementById('outTitle').innerText = document.getElementById('inTitle').value;
+        document.getElementById('outDate').innerText = document.getElementById('inDate').value;
+        document.getElementById('outDetails').innerText = document.getElementById('inDetails').value;
+        document.getElementById('outAmount').innerText = document.getElementById('inAmount').value;
+        document.getElementById('outPayNote').innerText = document.getElementById('inPayNote').value;
+        document.getElementById('outBankInfo').innerText = document.getElementById('inBankInfo').value;
+    }
+</script>
+
+</body>
+</html>
