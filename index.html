@@ -153,10 +153,10 @@
             display: flex;
             justify-content: center;
             align-items: flex-start;
-            overflow-x: auto;
+            width: 100%;
         }
 
-        /* 📄 固定 A4 尺寸 (794px x 1123px) */
+        /* 📄 固定 A4 原生尺寸 (794px x 1123px) */
         .invoice-card {
             background: white;
             width: 794px;
@@ -169,8 +169,8 @@
             justify-content: space-between;
             text-align: center;
             box-sizing: border-box;
-            /* 防止螢幕過窄時變形 */
-            flex-shrink: 0; 
+            flex-shrink: 0;
+            transform-origin: top center; /* 讓縮放以頂部中心為基準 */
         }
 
         .invoice-header {
@@ -236,11 +236,27 @@
             text-align: center;
         }
 
-        /* 📱 手機與平板螢幕顯示優化：等比例自動縮放預覽，不影響實際輸出的 A4 PNG 尺寸 */
+        /* 📱 手機與平板預覽自動縮放（防走樣） */
         @media screen and (max-width: 1200px) {
             .container { flex-direction: column; align-items: center; }
             .form-section { max-width: 100%; width: 100%; }
-            .preview-section { width: 100%; overflow-x: auto; padding: 10px 0; }
+            .preview-section { 
+                width: 100%; 
+                height: 700px; /* 控制預覽區高度 */
+                overflow: hidden; 
+            }
+            .invoice-card {
+                transform: scale(0.55); /* 平板/中螢幕縮小至 55% */
+            }
+        }
+
+        @media screen and (max-width: 500px) {
+            .preview-section { 
+                height: 520px; /* 手機版高度適應 */
+            }
+            .invoice-card {
+                transform: scale(0.42); /* 手機小螢幕縮小至 42% 剛好填滿 */
+            }
         }
 
         /* 🖨️ 列印模式 */
@@ -248,7 +264,14 @@
             body { background: white; padding: 0; }
             .form-section { display: none; }
             .container { display: block; }
-            .invoice-card { box-shadow: none; padding: 40px; width: 100%; height: 100vh; border: none; }
+            .invoice-card { 
+                transform: scale(1) !important; 
+                box-shadow: none; 
+                padding: 40px; 
+                width: 100%; 
+                height: 100vh; 
+                border: none; 
+            }
         }
     </style>
 </head>
@@ -325,7 +348,7 @@
         </div>
     </div>
 
-    <!-- 預覽區 (標準 A4 比例卡片) -->
+    <!-- 預覽區 (手機版已加入自動縮放) -->
     <div class="preview-section">
         <div class="invoice-card" id="invoiceCard">
             <div>
@@ -467,15 +490,23 @@
         document.getElementById('outBankInfo').innerText = document.getElementById('inBankInfo').value;
     }
 
-    // 📸 固定輸出為高解析度 A4 PNG (以 2 倍 Scale 生成，清晰度更高)
+    // 📸 截圖前暫時還原 scale(1) 確保 PNG 清晰度，截圖後恢復縮放
     function generateCanvas() {
         const element = document.getElementById('invoiceCard');
+        const originalTransform = element.style.transform;
+        
+        // 暫時還原為原尺寸 1:1 以確保截圖清晰度
+        element.style.transform = 'none';
+
         return html2canvas(element, { 
             scale: 2, 
             backgroundColor: "#ffffff", 
             useCORS: true,
             width: 794,
             height: 1123
+        }).then(canvas => {
+            element.style.transform = originalTransform; // 截圖完成後恢復畫面的縮放
+            return canvas;
         });
     }
 
