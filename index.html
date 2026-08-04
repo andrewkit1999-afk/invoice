@@ -160,7 +160,7 @@
             width: 100%;
         }
 
-        /* 📱 手機/電腦螢幕顯示的單據卡片 */
+        /* 📱 手機/電腦螢幕顯示的預覽單據卡片 */
         .invoice-card {
             background: white;
             width: 100%;
@@ -214,6 +214,7 @@
             color: #555;
             text-align: center;
             letter-spacing: 1px;
+            white-space: nowrap;
         }
         .bill-details-list {
             text-align: left;
@@ -250,59 +251,81 @@
             width: 100%;
         }
 
-        /* 📸 截圖瞬間：固定為標準 A4 比例尺寸 (794px × 1123px) */
-        .invoice-card.capturing {
+        /* 📄 專用的 A4 導出卡片樣式 (完全獨立，不繼承 .invoice-card 限制) */
+        .a4-export-card {
             width: 794px !important;
             height: 1123px !important;
             max-width: none !important;
             padding: 60px 70px !important;
-            border-radius: 0 !important;
-            box-shadow: none !important;
-            border: none !important;
+            background: #ffffff !important;
+            box-sizing: border-box !important;
             display: flex !important;
             flex-direction: column !important;
             justify-content: space-between !important;
+            border: none !important;
+            border-radius: 0 !important;
+            position: absolute !important;
+            left: -9999px !important;
+            top: 0 !important;
+            text-align: center !important;
         }
-        .invoice-card.capturing .invoice-header {
+        .a4-export-card .invoice-header {
             border-bottom: 4px solid #333 !important;
             padding-bottom: 20px !important;
             margin-bottom: 30px !important;
+            width: 100% !important;
         }
-        .invoice-card.capturing .invoice-header h1 { 
+        .a4-export-card .invoice-header h1 { 
             font-size: 44px !important; 
             letter-spacing: 4px !important; 
+            margin: 0 !important;
         }
-        .invoice-card.capturing .meta-info p { 
+        .a4-export-card .meta-info {
+            width: 100% !important;
+            text-align: left !important;
+        }
+        .a4-export-card .meta-info p { 
             font-size: 24px !important; 
-            margin: 12px 0 !important; 
+            margin: 14px 0 !important; 
         }
-        .invoice-card.capturing .bill-summary { 
+        .a4-export-card .bill-summary { 
             margin: 40px 0 !important; 
             padding: 30px !important; 
             border-top: 4px solid #1a73e8 !important; 
             border-bottom: 4px solid #1a73e8 !important; 
+            width: 100% !important;
+            background: #fafafa !important;
         }
-        .invoice-card.capturing .bill-summary h3 { 
+        .a4-export-card .bill-summary h3 { 
             font-size: 24px !important; 
+            letter-spacing: 2px !important;
+            margin-top: 0 !important;
         }
-        .invoice-card.capturing .bill-details-list { 
+        .a4-export-card .bill-details-list { 
             font-size: 24px !important; 
             line-height: 2.2 !important; 
-            min-height: 180px !important; 
+            min-height: 200px !important; 
+            width: 100% !important;
         }
-        .invoice-card.capturing .bill-item-line { 
+        .a4-export-card .bill-item-line { 
             padding: 12px 0 !important; 
             border-bottom: 1px dashed #ddd !important; 
+            width: 100% !important;
+            display: flex !important;
+            justify-content: space-between !important;
         }
-        .invoice-card.capturing .total-amount { 
+        .a4-export-card .total-amount { 
             font-size: 36px !important; 
             margin-top: 30px !important; 
+            text-align: right !important;
+            width: 100% !important;
         }
-        .invoice-card.capturing .payment-info { 
+        .a4-export-card .payment-info { 
             font-size: 22px !important; 
             padding-top: 30px !important; 
             border-top: 2px dashed #ccc !important; 
             line-height: 1.8 !important; 
+            width: 100% !important;
         }
 
         @media screen and (max-width: 900px) {
@@ -583,25 +606,34 @@
         document.getElementById('outBankInfo').innerText = document.getElementById('inBankInfo').value;
     }
 
-    // 🚀 A4 滿版截圖：瞬間設定 794x1123 比例並生成圖片
+    // 🚀 100% 滿版 A4 離屏渲染核心
     async function generateCanvas() {
-        const card = document.getElementById('invoiceCard');
+        const sourceCard = document.getElementById('invoiceCard');
         
-        // 1. 截圖前加入 A4 capturaing class 展開高寬
-        card.classList.add('capturing');
+        // 1. 克隆卡片 DOM
+        const clone = sourceCard.cloneNode(true);
+        clone.id = 'exportTempCard';
+        
+        // 2. 徹底清空原本的 class，只套用專用的 .a4-export-card 樣式
+        clone.className = 'a4-export-card';
+        
+        // 3. 掛載到 body
+        document.body.appendChild(clone);
 
-        // 2. 執行 html2canvas 截圖 (指定 794x1123 A4 像素)
-        const canvas = await html2canvas(card, { 
+        // 4. 截圖
+        const canvas = await html2canvas(clone, { 
             scale: 2, 
             backgroundColor: "#ffffff", 
             useCORS: true,
             width: 794,
             height: 1123,
+            windowWidth: 794,
+            windowHeight: 1123,
             logging: false
         });
 
-        // 3. 截圖完成後立刻恢復手機預覽樣式
-        card.classList.remove('capturing');
+        // 5. 截圖完畢即刻清除
+        document.body.removeChild(clone);
 
         return canvas;
     }
