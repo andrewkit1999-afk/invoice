@@ -241,57 +241,78 @@
             text-align: center;
         }
 
-        /* 🖨️ A4 匯出/列印時強行放大文字與排版 */
-        .invoice-card.a4-mode {
+        /* 🖨️ A4 獨立生成專用樣式（解決 iPhone 文字被擠到左邊的問題） */
+        .a4-export-container {
+            position: absolute !important;
+            left: -9999px !important;
+            top: -9999px !important;
             width: 794px !important;
             height: 1123px !important;
-            max-width: none !important;
+            background: #ffffff !important;
             padding: 60px 70px !important;
-            border-radius: 0 !important;
-            border: none !important;
-            box-shadow: none !important;
+            box-sizing: border-box !important;
+            font-family: "PingFang HK", "Microsoft JhengHei", sans-serif !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: space-between !important;
         }
-        .invoice-card.a4-mode .invoice-header {
-            border-bottom-width: 4px;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
+        .a4-export-container .invoice-header {
+            border-bottom: 4px solid #333 !important;
+            padding-bottom: 20px !important;
+            margin-bottom: 30px !important;
+            text-align: center !important;
         }
-        .invoice-card.a4-mode .invoice-header h1 {
+        .a4-export-container .invoice-header h1 {
             font-size: 42px !important;
-            letter-spacing: 4px;
+            letter-spacing: 4px !important;
+            margin: 0 !important;
         }
-        .invoice-card.a4-mode .meta-info p {
+        .a4-export-container .meta-info p {
             font-size: 22px !important;
-            margin: 12px 0;
+            margin: 12px 0 !important;
+            text-align: left !important;
         }
-        .invoice-card.a4-mode .bill-summary {
-            margin: 40px 0;
-            padding: 30px;
-            border-top-width: 4px;
-            border-bottom-width: 4px;
+        .a4-export-container .bill-summary {
+            margin: 40px 0 !important;
+            padding: 30px !important;
+            border-top: 4px solid #1a73e8 !important;
+            border-bottom: 4px solid #1a73e8 !important;
+            background: #fafafa !important;
+            border-radius: 4px !important;
         }
-        .invoice-card.a4-mode .bill-summary h3 {
+        .a4-export-container .bill-summary h3 {
             font-size: 22px !important;
-            letter-spacing: 2px;
+            letter-spacing: 2px !important;
+            text-align: center !important;
+            margin-top: 0 !important;
         }
-        .invoice-card.a4-mode .bill-details-list {
+        .a4-export-container .bill-details-list {
             font-size: 22px !important;
-            line-height: 2.0;
-            min-height: 160px;
-            margin-top: 20px;
-            margin-bottom: 20px;
+            line-height: 2.0 !important;
+            min-height: 160px !important;
+            margin: 20px 0 !important;
+            text-align: left !important;
         }
-        .invoice-card.a4-mode .bill-item-line {
-            padding: 10px 0;
+        .a4-export-container .bill-item-line {
+            display: flex !important;
+            justify-content: space-between !important;
+            border-bottom: 1px dashed #ddd !important;
+            padding: 10px 0 !important;
         }
-        .invoice-card.a4-mode .total-amount {
+        .a4-export-container .total-amount {
             font-size: 34px !important;
-            margin-top: 25px;
+            font-weight: bold !important;
+            color: #d93025 !important;
+            margin-top: 25px !important;
+            text-align: right !important;
         }
-        .invoice-card.a4-mode .payment-info {
+        .a4-export-container .payment-info {
             font-size: 20px !important;
-            padding-top: 30px;
-            line-height: 1.8;
+            padding-top: 30px !important;
+            border-top: 1px dashed #ccc !important;
+            line-height: 1.8 !important;
+            text-align: center !important;
+            margin-top: auto !important;
         }
 
         @media screen and (max-width: 900px) {
@@ -572,22 +593,26 @@
         document.getElementById('outBankInfo').innerText = document.getElementById('inBankInfo').value;
     }
 
-    // 🚀 生成高清 A4 圖片（自動放大文字）
+    // 🚀 背景獨立生成高清 A4 圖片（完美解決 iPhone 文字靠左歪斜問題）
     function generateCanvas() {
-        const element = document.getElementById('invoiceCard');
+        const originalCard = document.getElementById('invoiceCard');
         
-        // 加上 A4 放大樣式 class
-        element.classList.add('a4-mode');
+        // 複製一份到背景處理，不影響手機畫面
+        const clone = originalCard.cloneNode(true);
+        clone.classList.add('a4-export-container');
+        document.body.appendChild(clone);
 
-        return html2canvas(element, { 
+        window.scrollTo(0, 0);
+
+        return html2canvas(clone, { 
             scale: 2, 
             backgroundColor: "#ffffff", 
             useCORS: true,
             width: 794,
-            height: 1123
+            height: 1123,
+            windowWidth: 1024 // 模擬桌面大螢幕渲染，避免 iPhone 螢幕擠壓
         }).then(canvas => {
-            // 繪製完畢即時移除 class，還原畫面 preview
-            element.classList.remove('a4-mode');
+            document.body.removeChild(clone);
             return canvas;
         });
     }
@@ -622,13 +647,12 @@
         const shareText = `你好！此為 ${toName} 的單據，金額為 ${currency} ${symbol}${amount} (${dateStr})。`;
         const encodedText = encodeURIComponent(shareText);
 
-        // 判斷是否為 iOS Chrome (CriOS)
         const isIOSChrome = /CriOS/i.test(navigator.userAgent);
 
         try {
             const canvas = await generateCanvas();
             
-            // 如果是 iOS Chrome，直接採用「下載圖片 + 開啟 WhatsApp」模式，避開 iOS 系統權限 Bug
+            // iOS Chrome 降級處置，自動下載並提醒貼上
             if (isIOSChrome) {
                 downloadPNG();
                 alert("⚠️ 由於 iOS Chrome 系統限制，已自動為你下載收據圖片！\n\n系統即將為你開啟 WhatsApp，請直接在對話框附加剛下載的圖片即可。");
@@ -636,7 +660,6 @@
                 return;
             }
 
-            // 其他支援完整的瀏覽器 (如 Safari / Android Chrome)
             canvas.toBlob(async (blob) => {
                 if (!blob) {
                     downloadPNG();
@@ -652,7 +675,6 @@
                         text: shareText
                     });
                 } else {
-                    // 不支援直接分享檔案時的降級處理
                     downloadPNG();
                     alert("已為你下載圖片！即將開啟 WhatsApp，請直接貼上或附加圖片。");
                     window.location.href = `https://api.whatsapp.com/send?text=${encodedText}`;
@@ -661,7 +683,6 @@
 
         } catch (err) {
             console.error('分享失敗:', err);
-            // 出錯時保底：下載 PNG 並打開 WhatsApp
             downloadPNG();
             window.location.href = `https://api.whatsapp.com/send?text=${encodedText}`;
         }
