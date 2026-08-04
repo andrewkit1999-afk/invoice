@@ -21,7 +21,7 @@
             display: flex;
             flex-direction: row;
             gap: 20px;
-            max-width: 1400px;
+            max-width: 1100px;
             margin: 0 auto;
         }
         /* 左邊輸入區 */
@@ -160,122 +160,164 @@
             width: 100%;
         }
 
-        /* 📄 固定 A4 原生尺寸 (794px x 1123px) */
+        /* 📱 螢幕上顯示的小卡片 (精簡舒適尺寸) */
         .invoice-card {
             background: white;
-            width: 794px;
-            height: 1123px;
-            padding: 50px 60px;
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 420px;
+            min-height: 580px;
+            padding: 25px 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
             display: flex;
             flex-direction: column;
             justify-content: space-between;
             text-align: center;
             box-sizing: border-box;
-            flex-shrink: 0;
-            transform-origin: top center;
+            border: 1px solid #e0e0e0;
         }
 
         .invoice-header {
-            border-bottom: 3px solid #333;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
             text-align: center;
         }
         .invoice-header h1 {
             margin: 0;
-            font-size: 32px;
-            letter-spacing: 3px;
+            font-size: 22px;
+            letter-spacing: 2px;
         }
         .meta-info {
             text-align: left;
         }
         .meta-info p {
-            margin: 10px 0;
-            font-size: 18px;
+            margin: 6px 0;
+            font-size: 14px;
         }
         .bill-summary {
-            margin: 40px 0;
+            margin: 20px 0;
             background: #fafafa;
-            padding: 25px;
-            border-top: 3px solid #1a73e8;
-            border-bottom: 3px solid #1a73e8;
+            padding: 15px;
+            border-top: 2px solid #1a73e8;
+            border-bottom: 2px solid #1a73e8;
+            border-radius: 4px;
         }
         .bill-summary h3 {
             margin-top: 0;
-            font-size: 18px;
+            font-size: 14px;
             color: #555;
             text-align: center;
             letter-spacing: 1px;
         }
         .bill-details-list {
             text-align: left;
-            margin-top: 20px;
-            margin-bottom: 20px;
-            line-height: 1.8;
-            min-height: 120px;
-            font-size: 18px;
+            margin-top: 10px;
+            margin-bottom: 10px;
+            line-height: 1.6;
+            min-height: 60px;
+            font-size: 14px;
         }
         .bill-item-line {
             display: flex;
             justify-content: space-between;
             border-bottom: 1px dashed #ddd;
-            padding: 8px 0;
+            padding: 5px 0;
         }
         .total-amount {
-            font-size: 26px;
+            font-size: 18px;
             font-weight: bold;
             color: #d93025;
-            margin-top: 20px;
+            margin-top: 10px;
             text-align: right;
         }
         .payment-info {
             margin-top: auto;
-            padding-top: 25px;
+            padding-top: 15px;
             border-top: 1px dashed #ccc;
-            font-size: 16px;
+            font-size: 13px;
             color: #555;
-            line-height: 1.6;
+            line-height: 1.5;
             text-align: center;
         }
 
-        /* 📱 手機與平板預覽自動縮放 */
-        @media screen and (max-width: 1200px) {
+        /* 🖨️【重點修正】A4 匯出/列印時強行放大文字與排版 */
+        .invoice-card.a4-mode {
+            width: 794px !important;
+            height: 1123px !important;
+            max-width: none !important;
+            padding: 60px 70px !important;
+            border-radius: 0 !important;
+            border: none !important;
+            box-shadow: none !important;
+        }
+        .invoice-card.a4-mode .invoice-header {
+            border-bottom-width: 4px;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .invoice-card.a4-mode .invoice-header h1 {
+            font-size: 42px !important;
+            letter-spacing: 4px;
+        }
+        .invoice-card.a4-mode .meta-info p {
+            font-size: 22px !important;
+            margin: 12px 0;
+        }
+        .invoice-card.a4-mode .bill-summary {
+            margin: 40px 0;
+            padding: 30px;
+            border-top-width: 4px;
+            border-bottom-width: 4px;
+        }
+        .invoice-card.a4-mode .bill-summary h3 {
+            font-size: 22px !important;
+            letter-spacing: 2px;
+        }
+        .invoice-card.a4-mode .bill-details-list {
+            font-size: 22px !important;
+            line-height: 2.0;
+            min-height: 160px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+        .invoice-card.a4-mode .bill-item-line {
+            padding: 10px 0;
+        }
+        .invoice-card.a4-mode .total-amount {
+            font-size: 34px !important;
+            margin-top: 25px;
+        }
+        .invoice-card.a4-mode .payment-info {
+            font-size: 20px !important;
+            padding-top: 30px;
+            line-height: 1.8;
+        }
+
+        @media screen and (max-width: 900px) {
             .container { flex-direction: column; align-items: center; }
             .form-section { max-width: 100%; width: 100%; }
-            .preview-section { 
-                width: 100%; 
-                height: 700px; 
-                overflow: hidden; 
-            }
-            .invoice-card {
-                transform: scale(0.55);
-            }
         }
 
-        @media screen and (max-width: 500px) {
-            .preview-section { 
-                height: 520px; 
-            }
-            .invoice-card {
-                transform: scale(0.42);
-            }
-        }
-
-        /* 🖨️ 列印模式 */
+        /* 🖨️ 直接列印模式 (Ctrl+P) */
         @media print {
             body { background: white; padding: 0; }
             .form-section { display: none; }
-            .container { display: block; }
-            .invoice-card { 
-                transform: scale(1) !important; 
-                box-shadow: none; 
-                padding: 40px; 
-                width: 100%; 
-                height: 100vh; 
-                border: none; 
+            .container { display: block; max-width: 100%; }
+            .invoice-card {
+                width: 100% !important;
+                height: 100vh !important;
+                max-width: none !important;
+                padding: 50px !important;
+                border: none !important;
+                box-shadow: none !important;
             }
+            .invoice-header h1 { font-size: 42px !important; }
+            .meta-info p { font-size: 22px !important; }
+            .bill-summary h3 { font-size: 22px !important; }
+            .bill-details-list { font-size: 22px !important; }
+            .total-amount { font-size: 34px !important; }
+            .payment-info { font-size: 20px !important; }
         }
     </style>
 </head>
@@ -286,25 +328,21 @@
     <div class="form-section">
         <h2>打單資料輸入</h2>
         
-        <!-- ❗ 必填：服務類別 / 抬頭 -->
         <div class="form-group">
             <label>服務類別 / 抬頭 <span class="required">* (必填)</span>:</label>
             <input type="text" id="inTitle" value="中港客運" required oninput="updatePreview()">
         </div>
 
-        <!-- ❗ 必填：客戶名稱 (To) -->
         <div class="form-group">
             <label>客戶名稱 (To) <span class="required">* (必填)</span>:</label>
             <input type="text" id="inTo" value="" required placeholder="例如: Mall natural limited" oninput="updatePreview()">
         </div>
 
-        <!-- ❗ 必填：發單人 (From) -->
         <div class="form-group">
             <label>發單人 (From) <span class="required">* (必填)</span>:</label>
             <input type="text" id="inFrom" value="Danny Fung" required oninput="updatePreview()">
         </div>
 
-        <!-- ❗ 必填：單據日期 -->
         <div class="form-group">
             <label>單據日期 <span class="required">* (必填)</span>:</label>
             <div class="date-input-container">
@@ -313,7 +351,6 @@
             </div>
         </div>
 
-        <!-- 行程 / 項目詳情 -->
         <div class="form-group">
             <label>行程 / 項目詳情:</label>
             <div id="itemsContainer">
@@ -388,6 +425,10 @@
 </div>
 
 <script>
+    window.addEventListener('DOMContentLoaded', () => {
+        setTodayDate();
+    });
+
     function formatDateDisplay(dateVal) {
         if (!dateVal) return "";
         const parts = dateVal.split("-");
@@ -404,7 +445,6 @@
         updatePreview();
     }
 
-    // 🔍 表單必填欄位驗證（抬頭、客戶名稱、發單人、日期）
     function validateForm() {
         const titleVal = document.getElementById('inTitle').value.trim();
         const toVal = document.getElementById('inTo').value.trim();
@@ -532,11 +572,12 @@
         document.getElementById('outBankInfo').innerText = document.getElementById('inBankInfo').value;
     }
 
+    // 🚀 生成高清 A4 圖片（自動放大文字）
     function generateCanvas() {
         const element = document.getElementById('invoiceCard');
-        const originalTransform = element.style.transform;
         
-        element.style.transform = 'none';
+        // 加上 A4 放大樣式 class
+        element.classList.add('a4-mode');
 
         return html2canvas(element, { 
             scale: 2, 
@@ -545,7 +586,8 @@
             width: 794,
             height: 1123
         }).then(canvas => {
-            element.style.transform = originalTransform;
+            // 繪製完畢即時移除 class，還原畫面 preview
+            element.classList.remove('a4-mode');
             return canvas;
         });
     }
