@@ -241,7 +241,7 @@
             text-align: center;
         }
 
-        /* 🖨️【重點修正】A4 匯出/列印時強行放大文字與排版 */
+        /* 🖨️ A4 匯出/列印時強行放大文字與排版 */
         .invoice-card.a4-mode {
             width: 794px !important;
             height: 1123px !important;
@@ -620,10 +620,29 @@
         const symbol = (currency === 'RMB') ? '¥' : '$';
 
         const shareText = `你好！此為 ${toName} 的單據，金額為 ${currency} ${symbol}${amount} (${dateStr})。`;
+        const encodedText = encodeURIComponent(shareText);
+
+        // 判斷是否為 iOS Chrome (CriOS)
+        const isIOSChrome = /CriOS/i.test(navigator.userAgent);
 
         try {
             const canvas = await generateCanvas();
+            
+            // 如果是 iOS Chrome，直接採用「下載圖片 + 開啟 WhatsApp」模式，避開 iOS 系統權限 Bug
+            if (isIOSChrome) {
+                downloadPNG();
+                alert("⚠️ 由於 iOS Chrome 系統限制，已自動為你下載收據圖片！\n\n系統即將為你開啟 WhatsApp，請直接在對話框附加剛下載的圖片即可。");
+                window.location.href = `https://api.whatsapp.com/send?text=${encodedText}`;
+                return;
+            }
+
+            // 其他支援完整的瀏覽器 (如 Safari / Android Chrome)
             canvas.toBlob(async (blob) => {
+                if (!blob) {
+                    downloadPNG();
+                    return;
+                }
+
                 const file = new File([blob], `收據_${toName}.png`, { type: 'image/png' });
 
                 if (navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -633,15 +652,18 @@
                         text: shareText
                     });
                 } else {
+                    // 不支援直接分享檔案時的降級處理
                     downloadPNG();
-                    alert("已為你下載圖片！頁面將自動開啟 WhatsApp，請直接將圖片貼上或拉入對話框即可。");
-                    const encodedText = encodeURIComponent(shareText);
-                    window.open(`https://api.whatsapp.com/send?text=${encodedText}`, '_blank');
+                    alert("已為你下載圖片！即將開啟 WhatsApp，請直接貼上或附加圖片。");
+                    window.location.href = `https://api.whatsapp.com/send?text=${encodedText}`;
                 }
             }, 'image/png');
+
         } catch (err) {
             console.error('分享失敗:', err);
-            alert('分享過程出錯，請使用「下載 PNG 圖片」功能。');
+            // 出錯時保底：下載 PNG 並打開 WhatsApp
+            downloadPNG();
+            window.location.href = `https://api.whatsapp.com/send?text=${encodedText}`;
         }
     }
 </script>
