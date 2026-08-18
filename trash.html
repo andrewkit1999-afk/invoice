@@ -3,97 +3,116 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>日本垃圾分類 AI 辨識器</title>
-    <!-- 引入 TensorFlow.js 與 Teachable Machine 庫 -->
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+    <title>日本垃圾分類 AI 辨識</title>
     <style>
-        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body { margin: 0; padding: 20px; background-color: #f5f5f7; display: flex; flex-direction: column; align-items: center; }
-        h1 { font-size: 1.4rem; color: #333; margin-bottom: 15px; text-align: center; }
-        #webcam-container { width: 100%; max-width: 400px; height: 300px; background: #000; border-radius: 12px; overflow: hidden; display: flex; justify-content: center; align-items: center; position: relative; }
-        canvas { width: 100% !important; height: 100% !important; object-fit: cover; }
-        .btn { margin-top: 15px; padding: 12px 24px; background: #007aff; color: white; border: none; border-radius: 25px; font-size: 1rem; font-weight: bold; cursor: pointer; }
-        .btn:disabled { background: #ccc; }
-        #label-container { width: 100%; max-width: 400px; margin-top: 20px; }
-        .result-card { background: white; padding: 12px 16px; border-radius: 10px; margin-bottom: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-weight: bold; }
-        .progress-bar { height: 6px; background: #e0e0e0; border-radius: 3px; margin-top: 4px; overflow: hidden; }
-        .progress-fill { height: 100%; background: #34c759; width: 0%; transition: width 0.2s ease; }
+        * { box-sizing: border-box; font-family: -apple-system, sans-serif; }
+        body { margin: 0; padding: 20px; background: #f4f5f7; display: flex; flex-direction: column; align-items: center; text-align: center; }
+        h1 { font-size: 1.3rem; color: #2c3e50; margin-bottom: 15px; }
+        .video-box { width: 100%; max-width: 380px; height: 280px; background: #000; border-radius: 12px; overflow: hidden; position: relative; }
+        video { width: 100%; height: 100%; object-fit: cover; }
+        .btn { margin-top: 15px; padding: 14px 28px; background: #007aff; color: white; border: none; border-radius: 25px; font-size: 1rem; font-weight: bold; width: 80%; max-width: 280px; }
+        .btn:disabled { background: #bbb; }
+        #result { margin-top: 20px; width: 100%; max-width: 380px; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); display: none; }
+        .cat-title { font-size: 1.4rem; font-weight: bold; color: #ff3b30; margin-bottom: 5px; }
+        .tips { font-size: 0.9rem; color: #666; text-align: left; background: #f9f9f9; padding: 10px; border-radius: 8px; margin-top: 10px; }
     </style>
 </head>
 <body>
 
     <h1>🇯🇵 日本垃圾分類 AI 辨識器</h1>
-    
-    <div id="webcam-container"></div>
-    <button class="btn" id="start-btn" onclick="init()">啟動鏡頭</button>
-    
-    <div id="label-container"></div>
 
-    <script type="text/javascript">
-        // ⚠️ 請替換為你在 Teachable Machine 匯出的模型網址
-        const URL = "https://teachablemachine.withgoogle.com/models/YOUR_MODEL_ID/";
+    <div class="video-box">
+        <video id="video" autoplay playsinline></video>
+    </div>
 
-        let model, webcam, labelContainer, maxPredictions;
+    <button class="btn" id="scan-btn" onclick="captureAndIdentify()">📸 拍攝並辨識</button>
 
-        async function init() {
-            document.getElementById("start-btn").disabled = true;
-            document.getElementById("start-btn").innerText = "載入AI模型中...";
+    <div id="result">
+        <div class="cat-title" id="res-category">辨識中...</div>
+        <div id="res-detail" style="color: #444; font-size: 0.95rem;"></div>
+        <div class="tips" id="res-tips"></div>
+    </div>
 
-            const modelURL = URL + "model.json";
-            const metadataURL = URL + "metadata.json";
+    <canvas id="canvas" style="display:none;"></canvas>
 
-            // 載入模型與 Metadata
-            model = await tmImage.load(modelURL, metadataURL);
-            maxPredictions = model.getTotalClasses();
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const btn = document.getElementById('scan-btn');
 
-            // 設定鏡頭（後置鏡頭優先）
-            const flip = false; // 手機後置鏡頭不需要鏡像
-            webcam = new tmImage.Webcam(300, 300, flip);
-            
-            // 請求手機相機權限（使用後置鏡頭 facingMode: "environment"）
-            await webcam.setup({ facingMode: "environment" });
-            await webcam.play();
-            window.requestAnimationFrame(loop);
+        // 啟動手機後置鏡頭
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+            .then(stream => { video.srcObject = stream; })
+            .catch(err => { alert("無法存取相機，請確保已允許相機權限，且正在使用 HTTPS 網址。"); });
 
-            // 貼上畫面上傳元素
-            document.getElementById("webcam-container").appendChild(webcam.canvas);
-            labelContainer = document.getElementById("label-container");
-            
-            labelContainer.innerHTML = "";
-            for (let i = 0; i < maxPredictions; i++) {
-                const card = document.createElement("div");
-                card.className = "result-card-wrapper";
-                card.innerHTML = `
-                    <div class="result-card">
-                        <span class="class-name">--</span>
-                        <span class="class-prob">0%</span>
-                    </div>
-                    <div class="progress-bar"><div class="progress-fill"></div></div>
-                `;
-                labelContainer.appendChild(card);
-            }
+        // 垃圾分類規則對照表
+        const rules = {
+            "bottle": { name: "ペットボトル (PET膠樽)", tips: "1. 拆下瓶蓋與塑膠標籤<br>2. 沖洗瓶身內部<br>3. 踩扁後丟入膠樽回收桶" },
+            "can": { name: "缶 (鋁罐/鐵罐)", tips: "1. 沖洗罐內<br>2. 丟入金屬罐專用回收桶" },
+            "paper": { name: "燃えるゴミ (可燃垃圾 / 紙類)", tips: "丟入可燃垃圾袋（通常為黃色或指定色袋）" },
+            "plastic": { name: "プラスチック (廢塑膠/包裝)", tips: "若有食物殘渣請先沖洗，乾淨的塑膠包裝/標籤丟此類" },
+            "glass": { name: "瓶 (玻璃瓶)", tips: "1. 移除瓶蓋<br>2. 沖洗乾淨<br>3. 丟入玻璃瓶回收區" }
+        };
 
-            document.getElementById("start-btn").style.display = "none";
+        async function captureAndIdentify() {
+            btn.disabled = true;
+            btn.innerText = "辨識中...";
+            document.getElementById('result').style.display = 'block';
+            document.getElementById('res-category').innerText = "AI 分析中...";
+            document.getElementById('res-detail').innerText = "";
+            document.getElementById('res-tips').innerHTML = "";
+
+            // 截取當前畫面
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+
+            canvas.toBlob(async (blob) => {
+                try {
+                    // 使用公用圖像辨識 API
+                    const response = await fetch("https://api-inference.huggingface.co/models/google/vit-base-patch16-224", {
+                        method: "POST",
+                        body: blob
+                    });
+                    const results = await response.json();
+                    
+                    if (results && results.length > 0) {
+                        const topResult = results[0].label.toLowerCase();
+                        matchJapaneseRule(topResult);
+                    } else {
+                        showUnknown();
+                    }
+                } catch (e) {
+                    showUnknown();
+                }
+                btn.disabled = false;
+                btn.innerText = "📸 拍攝並辨識";
+            }, 'image/jpeg');
         }
 
-        async function loop() {
-            webcam.update();
-            await predict();
-            window.requestAnimationFrame(loop);
+        function matchJapaneseRule(label) {
+            let matched = null;
+            if (label.includes("bottle") || label.includes("water")) matched = rules["bottle"];
+            else if (label.includes("can") || label.includes("soda")) matched = rules["can"];
+            else if (label.includes("glass") || label.includes("wine")) matched = rules["glass"];
+            else if (label.includes("paper") || label.includes("box") || label.includes("carton")) matched = rules["paper"];
+            else if (label.includes("plastic") || label.includes("wrapper") || label.includes("bag")) matched = rules["plastic"];
+
+            if (matched) {
+                document.getElementById('res-category').innerText = matched.name;
+                document.getElementById('res-detail').innerText = `辨識結果：${label}`;
+                document.getElementById('res-tips').innerHTML = `<b>💡 處理步驟：</b><br>${matched.tips}`;
+            } else {
+                document.getElementById('res-category').innerText = "燃えるゴミ (可燃垃圾)";
+                document.getElementById('res-detail').innerText = `辨識物品：${label}`;
+                document.getElementById('res-tips').innerHTML = "<b>💡 處理步驟：</b>一般未特別分類的物品或一般廢棄物，大多歸類為可燃垃圾。";
+            }
         }
 
-        async function predict() {
-            const prediction = await model.predict(webcam.canvas);
-            for (let i = 0; i < maxPredictions; i++) {
-                const className = prediction[i].className;
-                const probability = (prediction[i].probability * 100).toFixed(0);
-
-                const cardWrapper = labelContainer.childNodes[i];
-                cardWrapper.querySelector(".class-name").innerText = className;
-                cardWrapper.querySelector(".class-prob").innerText = probability + "%";
-                cardWrapper.querySelector(".progress-fill").style.width = probability + "%";
-            }
+        function showUnknown() {
+            document.getElementById('res-category').innerText = "無法明確辨識";
+            document.getElementById('res-detail').innerText = "請嘗試離物品近一點，或者換個光線充足的角度再拍一次。";
         }
     </script>
 </body>
