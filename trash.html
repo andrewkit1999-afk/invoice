@@ -4,20 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>日本垃圾分類 AI 辨識</title>
-    <!-- 引入 TensorFlow.js 與 MobileNet 本地辨識庫 -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet"></script>
     <style>
         * { box-sizing: border-box; font-family: -apple-system, sans-serif; }
-        body { margin: 0; padding: 20px; background: #f4f5f7; display: flex; flex-direction: column; align-items: center; text-align: center; }
-        h1 { font-size: 1.3rem; color: #2c3e50; margin-bottom: 15px; }
-        .video-box { width: 100%; max-width: 380px; height: 280px; background: #000; border-radius: 12px; overflow: hidden; position: relative; }
+        body { margin: 0; padding: 15px; background: #f4f5f7; display: flex; flex-direction: column; align-items: center; text-align: center; }
+        h1 { font-size: 1.2rem; color: #2c3e50; margin-bottom: 12px; }
+        .video-box { width: 100%; max-width: 360px; height: 250px; background: #000; border-radius: 12px; overflow: hidden; }
         video { width: 100%; height: 100%; object-fit: cover; }
-        .btn { margin-top: 15px; padding: 14px 28px; background: #007aff; color: white; border: none; border-radius: 25px; font-size: 1rem; font-weight: bold; width: 80%; max-width: 280px; }
+        .btn { margin-top: 12px; padding: 12px 24px; background: #007aff; color: white; border: none; border-radius: 25px; font-size: 1rem; font-weight: bold; width: 100%; max-width: 360px; }
         .btn:disabled { background: #bbb; }
-        #result { margin-top: 20px; width: 100%; max-width: 380px; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); display: none; }
-        .cat-title { font-size: 1.3rem; font-weight: bold; color: #007aff; margin-bottom: 8px; }
-        .tips { font-size: 0.9rem; color: #444; text-align: left; background: #f9f9f9; padding: 10px; border-radius: 8px; margin-top: 10px; line-height: 1.5; }
+        
+        #result { margin-top: 15px; width: 100%; max-width: 360px; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); display: none; }
+        .cat-title { font-size: 1.2rem; font-weight: bold; color: #007aff; margin-bottom: 6px; }
+        .tips { font-size: 0.88rem; color: #333; text-align: left; background: #f9f9f9; padding: 10px; border-radius: 8px; margin-top: 10px; line-height: 1.5; }
+        
+        /* 手動修正按鈕區 */
+        .manual-box { margin-top: 15px; width: 100%; max-width: 360px; }
+        .manual-title { font-size: 0.85rem; color: #666; margin-bottom: 8px; text-align: left; }
+        .tag-group { display: flex; flex-wrap: wrap; gap: 6px; }
+        .tag-btn { background: #e5e5ea; color: #333; border: none; padding: 6px 12px; border-radius: 15px; font-size: 0.8rem; cursor: pointer; }
+        .tag-btn:active { background: #007aff; color: white; }
     </style>
 </head>
 <body>
@@ -31,9 +38,22 @@
     <button class="btn" id="scan-btn" onclick="captureAndIdentify()">📸 拍攝並辨識</button>
 
     <div id="result">
-        <div class="cat-title" id="res-category">載入 AI 中...</div>
-        <div id="res-detail" style="color: #666; font-size: 0.85rem;"></div>
+        <div class="cat-title" id="res-category">分析中...</div>
+        <div id="res-detail" style="color: #666; font-size: 0.8rem;"></div>
         <div class="tips" id="res-tips"></div>
+    </div>
+
+    <!-- 手動選擇（防止 AI 認錯） -->
+    <div class="manual-box">
+        <div class="manual-title">💡 如果 AI 認錯，請直接點選正確種類：</div>
+        <div class="tag-group">
+            <button class="tag-btn" onclick="showRule('spray')">💨 噴霧罐/氣霧罐</button>
+            <button class="tag-btn" onclick="showRule('bottle')">🥤 PET 膠樽</button>
+            <button class="tag-btn" onclick="showRule('can')">🥫 鋁罐/鐵罐</button>
+            <button class="tag-btn" onclick="showRule('glass')">🍾 玻璃瓶</button>
+            <button class="tag-btn" onclick="showRule('paper')">📦 紙盒/可燃</button>
+            <button class="tag-btn" onclick="showRule('plastic')">🛍️ 廢塑膠/膠袋</button>
+        </div>
     </div>
 
     <script>
@@ -41,82 +61,49 @@
         const btn = document.getElementById('scan-btn');
         let model = null;
 
-        // 1. 預先載入 MobileNet AI 模型
-        mobilenet.load().then(loadedModel => {
-            model = loadedModel;
-            btn.innerText = "📸 拍攝並辨識";
-        });
+        mobilenet.load().then(m => { model = m; });
 
-        // 2. 啟動鏡頭
         navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-            .then(stream => { video.srcObject = stream; })
-            .catch(err => { alert("無法存取相機，請確保允許相機權限！"); });
+            .then(s => { video.srcObject = s; });
 
-        // 日本垃圾分類對照表
         const rules = {
+            "spray": { name: "スプレー缶 (氣霧噴霧罐)", tips: "1. <b>必須在戶外排空剩餘氣體</b><br>2. 拔除白色塑膠蓋（歸類為塑膠）<br>3. 多數地區無需打孔，直接丟入金屬罐/有害垃圾桶" },
             "bottle": { name: "ペットボトル (PET 膠樽)", tips: "1. 拆下瓶蓋與塑膠標籤（歸類為塑膠）<br>2. 沖洗瓶身內部<br>3. 壓扁後丟入 PET 膠樽回收桶" },
             "can": { name: "缶 (鋁罐/鐵罐)", tips: "1. 沖洗罐內<br>2. 丟入金屬罐專用回收桶" },
-            "paper": { name: "燃えるゴミ (可燃垃圾 / 紙類)", tips: "丟入可燃垃圾袋（指定顏色袋）" },
-            "plastic": { name: "プラスチック (廢塑膠/包裝)", tips: "乾淨的膠袋、瓶蓋、塑膠包裝盒丟此類" },
+            "paper": { name: "燃えるゴミ (可燃垃圾)", tips: "一般紙盒、紙巾、剩菜等，丟入指定可燃垃圾袋" },
+            "plastic": { name: "プラスチック (廢塑膠)", tips: "乾淨膠袋、瓶蓋、塑膠包裝盒丟此類" },
             "glass": { name: "瓶 (玻璃瓶)", tips: "1. 移除瓶蓋<br>2. 沖洗乾淨<br>3. 丟入玻璃瓶回收區" }
         };
 
-        // 3. 進行辨識
         async function captureAndIdentify() {
-            if (!model) {
-                alert("AI 模型載入中，請稍等幾秒再試！");
-                return;
-            }
-
-            btn.disabled = true;
+            if (!model) return;
             document.getElementById('result').style.display = 'block';
             document.getElementById('res-category').innerText = "分析中...";
 
-            // 使用 MobileNet 辨識 video 畫面
             const predictions = await model.classify(video);
-
             if (predictions && predictions.length > 0) {
-                // 取第一個信心度最高的結果
-                const topLabel = predictions[0].className.toLowerCase();
-                matchJapaneseRule(topLabel);
-            } else {
-                showDefault();
-            }
-
-            btn.disabled = false;
-        }
-
-        function matchJapaneseRule(label) {
-            let matched = null;
-
-            // 擴充膠樽與常見物品關鍵字
-            if (label.includes("bottle") || label.includes("water") || label.includes("pop") || label.includes("flask")) {
-                matched = rules["bottle"];
-            } else if (label.includes("can") || label.includes("soda") || label.includes("tin")) {
-                matched = rules["can"];
-            } else if (label.includes("glass") || label.includes("wine") || label.includes("beer")) {
-                matched = rules["glass"];
-            } else if (label.includes("carton") || label.includes("box") || label.includes("paper") || label.includes("packet")) {
-                matched = rules["paper"];
-            } else if (label.includes("plastic") || label.includes("bag") || label.includes("wrapper")) {
-                matched = rules["plastic"];
-            }
-
-            if (matched) {
-                document.getElementById('res-category').innerText = matched.name;
-                document.getElementById('res-detail').innerText = `AI 辨識目標：${label}`;
-                document.getElementById('res-tips').innerHTML = `<b>💡 處理步驟：</b><br>${matched.tips}`;
-            } else {
-                document.getElementById('res-category').innerText = "燃えるゴミ (可燃垃圾)";
-                document.getElementById('res-detail').innerText = `AI 辨識目標：${label}`;
-                document.getElementById('res-tips').innerHTML = "<b>💡 提示：</b>未特別分類的一般物品或複合材質，通常歸類為可燃垃圾。若為膠樽，請將樽蓋及包裝貼紙拆下，樽身洗淨壓扁回收。";
+                const label = predictions[0].className.toLowerCase();
+                
+                if (label.includes("spray") || label.includes("aerosol") || label.includes("canister")) {
+                    showRule('spray', label);
+                } else if (label.includes("bottle") || label.includes("water") || label.includes("jug")) {
+                    showRule('bottle', label);
+                } else if (label.includes("can")) {
+                    showRule('can', label);
+                } else if (label.includes("glass")) {
+                    showRule('glass', label);
+                } else {
+                    showRule('paper', label);
+                }
             }
         }
 
-        function showDefault() {
-            document.getElementById('res-category').innerText = "無法明確辨識";
-            document.getElementById('res-detail').innerText = "";
-            document.getElementById('res-tips').innerHTML = "請將鏡頭靠近物品一點再試一次。";
+        function showRule(key, rawLabel = "") {
+            document.getElementById('result').style.display = 'block';
+            const item = rules[key];
+            document.getElementById('res-category').innerText = item.name;
+            document.getElementById('res-detail').innerText = rawLabel ? `AI 辨識目標：${rawLabel}` : "手動選擇分類";
+            document.getElementById('res-tips').innerHTML = `<b>💡 日本回收步驟：</b><br>${item.tips}`;
         }
     </script>
 </body>
